@@ -262,3 +262,104 @@
 	keywords = {Virtual Model, Concrete Model, Uter Model, Task Section, Molecular Structure Representation},
 	pages = {294--295},
 }
+
+
+@misc{snatoms,
+	title = {About {Snatoms} - {Magnetic} {Molecular} {Modeling} {Kit}},
+	url = {https://snatoms.com/pages/about},
+	abstract = {Snatoms are a molecular modeling kit where the atoms snap together magnetically, created by Veritasium host and educator Derek Muller.},
+	language = {en},
+	urldate = {2024-02-02},
+	journal = {Snatoms},
+}
+
+
+@misc{mobilenet,
+	title = {{MobileNetV2}: {Inverted} {Residuals} and {Linear} {Bottlenecks}},
+	shorttitle = {{MobileNetV2}},
+	url = {http://arxiv.org/abs/1801.04381},
+	abstract = {In this paper we describe a new mobile architecture, MobileNetV2, that improves the state of the art performance of mobile models on multiple tasks and benchmarks as well as across a spectrum of different model sizes. We also describe efficient ways of applying these mobile models to object detection in a novel framework we call SSDLite. Additionally, we demonstrate how to build mobile semantic segmentation models through a reduced form of DeepLabv3 which we call Mobile DeepLabv3. The MobileNetV2 architecture is based on an inverted residual structure where the input and output of the residual block are thin bottleneck layers opposite to traditional residual models which use expanded representations in the input an MobileNetV2 uses lightweight depthwise convolutions to filter features in the intermediate expansion layer. Additionally, we find that it is important to remove non-linearities in the narrow layers in order to maintain representational power. We demonstrate that this improves performance and provide an intuition that led to this design. Finally, our approach allows decoupling of the input/output domains from the expressiveness of the transformation, which provides a convenient framework for further analysis. We measure our performance on Imagenet classification, COCO object detection, VOC image segmentation. We evaluate the trade-offs between accuracy, and number of operations measured by multiply-adds (MAdd), as well as the number of parameters},
+	urldate = {2024-02-06},
+	publisher = {arXiv},
+	author = {Sandler, Mark and Howard, Andrew and Zhu, Menglong and Zhmoginov, Andrey and Chen, Liang-Chieh},
+	month = mar,
+	year = {2019},
+	note = {arXiv:1801.04381 [cs]},
+	keywords = {Computer Science - Computer Vision and Pattern Recognition},
+}
+
+@misc{suyog_efficientnet-edgetpu:_2019,
+	title = {{EfficientNet}-{EdgeTPU}: {Creating} {Accelerator}-{Optimized} {Neural} {Networks} with {AutoML}},
+	shorttitle = {{EfficientNet}-{EdgeTPU}},
+	url = {https://blog.research.google/2019/08/efficientnet-edgetpu-creating.html},
+	language = {en},
+	urldate = {2024-02-06},
+	author = {Suyog, Gupta  and Mingxing, Tan},
+	month = aug,
+	year = {2019},
+}
+
+
+@misc{yang_breaking_2018,
+	title = {Breaking the beam search curse: a study of ({Re}-)scoring methods and stopping criteria for neural machine translation},
+	shorttitle = {Breaking the beam search curse},
+	url = {http://arxiv.org/abs/1808.09582},
+	abstract = {Beam search is widely used in neural machine translation, and usually improves translation quality compared to greedy search. It has been widely observed that, however, beam sizes larger than 5 hurt translation quality. We explain why this happens, and propose several methods to address this problem. Furthermore, we discuss the optimal stopping criteria for these methods. Results show that our hyperparameter-free methods outperform the widely-used hyperparameter-free heuristic of length normalization by +2.0 BLEU, and achieve the best results among all methods on Chinese-to-English translation.},
+	urldate = {2024-02-08},
+	publisher = {arXiv},
+	author = {Yang, Yilin and Huang, Liang and Ma, Mingbo},
+	month = oct,
+	year = {2018},
+	note = {arXiv:1808.09582 [cs]},
+	keywords = {Computer Science - Computation and Language},
+}
+
+
+
+@article{he_improved_2016,
+	title = {Improved neural machine translation with smt features},
+	volume = {30},
+	copyright = {Copyright (c)},
+	issn = {2374-3468},
+	url = {https://ojs.aaai.org/index.php/AAAI/article/view/9983},
+	doi = {10.1609/aaai.v30i1.9983},
+	abstract = {Neural machine translation (NMT) conducts end-to-end translation with a source language encoder and a target language decoder, making promising translation performance. However, as a newly emerged approach, the method has some limitations. An NMT system usually has to apply a vocabulary of certain size to avoid the time-consuming training and decoding, thus it causes a serious out-of-vocabulary problem. Furthermore, the decoder lacks a mechanism to guarantee all the source words to be translated and usually favors short translations, resulting in fluent but inadequate translations. In order to solve the above problems, we incorporate statistical machine translation (SMT) features, such as a translation model and an n-gram language model, with the NMT model under the log-linear framework. Our experiments show that the proposed method significantly improves the translation quality of the state-ofthe-art NMT system on Chinese-to-English translation tasks. Our method produces a gain of up to 2.33 BLEU score on NIST open test sets.},
+	language = {en},
+	number = {1},
+	urldate = {2024-02-08},
+	journal = {Proceedings of the AAAI Conference on Artificial Intelligence},
+	author = {He, Wei and He, Zhongjun and Wu, Hua and Wang, Haifeng},
+	month = feb,
+	year = {2016},
+	keywords = {Recurrent Neural Network},
+}
+
+@article{hu_squeeze-and-excitation_2019,
+	title = {Squeeze-and-excitation networks},
+	url = {http://arxiv.org/abs/1709.01507},
+	doi = {10.48550/arXiv.1709.01507},
+	abstract = {The central building block of convolutional neural networks (CNNs) is the convolution operator, which enables networks to construct informative features by fusing both spatial and channel-wise information within local receptive fields at each layer. A broad range of prior research has investigated the spatial component of this relationship, seeking to strengthen the representational power of a CNN by enhancing the quality of spatial encodings throughout its feature hierarchy. In this work, we focus instead on the channel relationship and propose a novel architectural unit, which we term the "Squeeze-and-Excitation" (SE) block, that adaptively recalibrates channel-wise feature responses by explicitly modelling interdependencies between channels. We show that these blocks can be stacked together to form SENet architectures that generalise extremely effectively across different datasets. We further demonstrate that SE blocks bring significant improvements in performance for existing state-of-the-art CNNs at slight additional computational cost. Squeeze-and-Excitation Networks formed the foundation of our ILSVRC 2017 classification submission which won first place and reduced the top-5 error to 2.251\%, surpassing the winning entry of 2016 by a relative improvement of {\textasciitilde}25\%. Models and code are available at https://github.com/hujie-frank/SENet.},
+	urldate = {2024-03-02},
+	publisher = {arXiv},
+	author = {Hu, Jie and Shen, Li and Albanie, Samuel and Sun, Gang and Wu, Enhua},
+	month = may,
+	year = {2019},
+	note = {arXiv:1709.01507 [cs]},
+	keywords = {Computer Science - Computer Vision and Pattern Recognition},
+}
+
+
+@article{tan_efficientnet:_2020,
+	title = {Efficientnet: rethinking model scaling for convolutional neural networks},
+	shorttitle = {Efficientnet},
+	url = {http://arxiv.org/abs/1905.11946},
+	doi = {10.48550/arXiv.1905.11946},
+	abstract = {Convolutional Neural Networks (ConvNets) are commonly developed at a fixed resource budget, and then scaled up for better accuracy if more resources are available. In this paper, we systematically study model scaling and identify that carefully balancing network depth, width, and resolution can lead to better performance. Based on this observation, we propose a new scaling method that uniformly scales all dimensions of depth/width/resolution using a simple yet highly effective compound coefficient. We demonstrate the effectiveness of this method on scaling up MobileNets and ResNet. To go even further, we use neural architecture search to design a new baseline network and scale it up to obtain a family of models, called EfficientNets, which achieve much better accuracy and efficiency than previous ConvNets. In particular, our EfficientNet-B7 achieves state-of-the-art 84.3\% top-1 accuracy on ImageNet, while being 8.4x smaller and 6.1x faster on inference than the best existing ConvNet. Our EfficientNets also transfer well and achieve state-of-the-art accuracy on CIFAR-100 (91.7\%), Flowers (98.8\%), and 3 other transfer learning datasets, with an order of magnitude fewer parameters. Source code is at https://github.com/tensorflow/tpu/tree/master/models/official/efficientnet.},
+	urldate = {2024-03-02},
+	publisher = {arXiv},
+	author = {Tan, Mingxing and Le, Quoc V.},
+	month = sep,
+	year = {2020},
+	note = {arXiv:1905.11946 [cs, stat]},
+	keywords = {Computer Science - Machine Learning, Computer Science - Computer Vision and Pattern Recognition, Statistics - Machine Learning},
+}

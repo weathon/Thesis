@@ -1,63 +1,125 @@
-\documentclass{article}
-\usepackage[letter, total={7in, 9in}]{geometry}
-
-\bibliographystyle{naturemag}
+\documentclass[conference]{IEEEtran}
 \usepackage{graphicx} % Required for inserting images
-
-\title{Converting Molecular Model Images to Digital Representations}
-\author{Menki Guo}
-\date{January 2024}
+\usepackage[style=ieee]{biblatex}
+\addbibresource{ref.bib}
+\renewcommand*{\bibfont}{\footnotesize}
 
 \begin{document}
+\title{Converting Molecular Model Images to Digital Representations}
+
+
+\author{\IEEEauthorblockN{Wenqi Marshall Guo}
+\IEEEauthorblockA{Department of CMPS\\
+University of British Columbia\\
+Kelowna, BC\\
+Email: wg25r@student.ubc.ca}
+\and
+\IEEEauthorblockN{Mohamed Shehata}
+\IEEEauthorblockA{Department of CMPS\\
+University of British Columbia\\
+Kelowna, BC\\
+Email: mohamed.sami.shehata@ubc.ca}
+}
 
 \maketitle
-\section*{Abstract}
- 
-\section{Introduction}
-Molecular models are helpful tools in chemistry education as they provide an intuitive way for students to understand the 3D structure compared to 2D molecular structure representation. These models can also assist students with 3D mental operations. Although virtual models could be as effective as concrete models, concrete should be available to students at least at the beginning of the study of new concepts and ideas, as humans sometimes rely on concrete objects.\cite{savec_evaluating_2005} However, digital model representation has the benefit that allowing students to look up more information about the molecule such as the IUPAC name and the boiling point. Students can also modify the molecule and observe how it will affect the molecular properties. Thus, it will be beneficial if students can convert concrete molecular models to digital representations. 
 
-Although there are models that are able to convert 2D molecular structure representations to corresponding digital representations \cite{swinocsr}\cite{decimer}\cite{chempix}, to the best of our knowledge, there is not a model for 3D molecular models. Closing this gap between 3D molecular models and digital representations is beneficial to chemical education 
+
+\begin{abstract}
+The abstract goes here.
+\end{abstract}
+
+
+\section{Introduction}
+Molecular models are helpful tools in chemistry education as they provide an intuitive way for students to understand the 3D structure compared to 2D molecular structure representation. These models can also assist students with 3D mental operations. Although virtual models could be as effective as concrete models, concrete should be available to students at least at the beginning of the study of new concepts and ideas, as humans sometimes rely on concrete objects.\cite{savec_evaluating_2005} However, digital model representation has the benefit that allows students to look up more information about the molecule such as the IUPAC name and the boiling point. Students can also modify the molecule and observe how it will affect the molecular properties. Thus, it will be beneficial if students can convert concrete molecular models to digital representations. 
+
+Although there are models that can convert 2D molecular structure representations to corresponding digital representations \cite{swinocsr}\cite{decimer}\cite{chempix}, to the best of our knowledge, there is not a model for 3D molecular models. It will be beneficial to chemical education to close this gap between 3D molecular models and digital representations. 
 
 Our contribution to this paper can be summarised as:
 \begin{itemize}
 \item We have constructed two datasets: one computer-rendered 3D molecular model and another consisting of real-world 3D molecular models.
 \item We trained a model on top of these two datasets that is capable of converting images of concrete molecular models into their respective SMILES notations. 
-\item We applied a multi-image input method allowing users to increase the accuracy of the output.
+\item We applied a method based on multi-image input and beam search to increase the accuracy of the output.
+\item We used another model to predict the potential sequence length for the SMILES, and this is used to help the generative model in beam search for better result
 % \item We applied a multi-image input method allowing users to capture multiple images of the molecular model to increase the accuracy of the output.
 \end{itemize}
 
 \section{Related Work}
+To the best of our knowledge, there is no prior model that can convert a 3D molecular set photo into its digital structure representation. However, there are some models for 2D structure formulas. The two most recent ones are Swin-OCSR\cite{swinocsr} and DECIMER.ai\footnote{The name DECIMER has been used by the same team for both the dataset and two versions of the mode, here we are refreshing the model published in 2023.}\cite{decimer}. These two models are very similar in architecture consisting of an image encoder and a transformer.
+
+% The decoder used in 
+\subsection{DECIMER.ai}
+In DECIMER.ai, the encoder is an EfficientNet-V2-M. EfficientNet is a type of convolutional neural network (CNN) with MBConv \cite{tan_efficientnet:_2020} (a modified version of the inverted bottleneck from \cite{mobilenet}) and Fused-MBConv \cite{suyog_efficientnet-edgetpu:_2019} developed by training-aware neural architecture search (NAS). \cite{swin_tran} \cite{effv2} MBConvs have 1x1 point-wise and 3x3 depth-wise convolutional layers, which can yield better parameters and computational efficiency. \cite{mobilenet} \cite{effv2} However, they cannot fully utilize modern hardware accelerators. In Efficient-Net-V2, they proposed using regular 3x3 convolutional layers (Fused-MBConvs) to replace MBConvs for the early stages of the network. This results in better training time with small overheads of parameters and FLOPs. In an MBConv block used in Efficient-Net-V2, the image is first passed through a 1x1 convolutional layer to increase its channel numbers, then a squeeze and excitation (SE) block is used \cite{hu_squeeze-and-excitation_2019}\cite{tan_efficientnet:_2020}. SE blocks are shown to increase the performance of CNNs with slight computational overhead. \cite{hu_squeeze-and-excitation_2019}. The SE block is followed by a depthwise 3x3 convolution and a 1x1 convolution, the latter decreases the channel counts to the same as input. In a Fused-MBConv, however, the depthwise convolution and the 1x1 convolution are replaced by a 3x3 convolution. \cite{effv2} \cite{mobilenet}
+
+The decoder in DECIMER.ai is a transformer model based on \cite{attention_is_all_you_need}. It has four transformer encoder blocks and four transformer decoder blocks with right parallel attention heads. \cite{decimer} The encoder of the transformer utilizes a multi-head self-attention block and an MLP to replace previous recurrent neural or convolutional layers. The decoder of the Transformer is auto-regressive, meaning the decoder of the model takes in the already generated sequence and predicts the next token. The generated sequence will be processed by a masked multi-head self-attention. The mask will prevent the model from attending tokens after $t$ when generating the $t$-th sequence. Then a cross-attention layer is applied that connects the input sequence and the generated sequence by using the output of the encoder as keys and values and output from the masked self-attention as the query. Then the output of the cross attention 
+% should i cite attention here
+
+%how it trained on real data and handwritten 
 \subsection{Swin-OCSR}
-\subsection{DECIMER}
+In Swin-OCSR, the encoder (they referred to as "backbone" in their paper) is built on the Swin Transformer. The image is cut into patches with each path having a size of $4 \times 4$ pixels. Then each patch is flattened into and treated as a token which is a 48-dim vector. Then a linear projection layer is applied and each token is into a 192-dim space. 
+Then 4 Swin-Transformer (Shifted Window Transformer) \cite{swin_tran} blocks are used. Each swim transformer block contains two regular transformer modules. In the first transformer module, Window Mutli-head Self Attention (W-MSA) is performed within each window, which is a group of neighbouring tokens. In the second transformer module, the Shifted Window Mutli-head Self Attention (SW-MSA) is performed on a shift-ed window. The W-MSA allows the model to capture the local relationship in the image, and the SW-MSA introduced a cross-window connection while maintaining efficiency. After each block, a patch merging operation is performed such that neighbouring patches are merged and the tokens are contacted. \cite{swin_tran} \cite{swinocsr}
+
+% Moved down here To this point, we get a tensor of $\frac{H}{4} \times \frac{W}{4} \times 48$ where $W$ and $H$ are the width and height of the original image. 
+% Before the tensor ($H_i \times W_i \times C_i$) gets passed to the next Swin Transformer block, a patch merging operation is performed to capture hierarchical information. During path merging, neighbouring $2 \times 2$ patches are merged and the tokens are concatenated. This results in $\frac{1}{4}$ of the number of patches and each $4C_i$ feature for each token. Then the dimensions of each token are reduced to $2C_i$. In Swin-OCSR, 4 Swin Transformer blocks are used; the last Swin Transformer block outputs a tensor with shape $\frac{H}{32} \times \frac{H}{32} \times 1536$. This tensor is flattened across the spatial axes and projects the last axis into 256 dimensions. 
+
+%how it trained using a special loss function  
+
 
 \section{Method}
 \subsection{Synthetic Dataset}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.3\textwidth]{generated}
+    \caption{A rendered image of 2,4-Dichlorobiphenyl}
+    \label{fig:enter-label}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.3\textwidth]{cap}
+    \caption{A real captured image of 2-Chloro-4-methylpentane}
+    \label{fig:enter-label}
+\end{figure}
+
 We downloaded a set of compounds from PubChem \cite{kim_pubchem_2023}, and then these compounds were filtered such that the compounds have at most X atoms \footnote{We did not directly limit the number of atoms on PubChem queries: we limited the number of heavy atoms and molecular weight, which yielded in the limitation of atoms.} and only contains elements of C, O, S, H, N, Cl, Br, F, and P.
 After filtering, there are 79,369 compounds in the dataset. We created a Blender Python Script to render these compounds into 3D molecular images. (OpenAI ChatGPT was used to write the building blocks and some logic of the script.) The colour of each atom follows the CPK colouring convention and was according to a couple of online sources and 3D molecular models on the market. For each molecule, we rendered 4 different images at different angles. Detailed render process can be found in our GitHub repository. 
 \subsection{Real-World Dataset}
-% To collect the real-world dataset, we made a mobile application. 
-% Since the most common molecular set kit doe not have S, ...
-% Our real-world dataset kept the stereochemistry information however our data
-% To make data collection easier, we group similar molecules using GPT. 
-% Volunteers from UBCO 
-We created a mobile application using React.js and recruited volunteers from the University of British Columbia Okanagan campus for the real-world dataset. To increase the efficiency of data collection, we group similar models using the GPT: a list of the names of the molecules is given to the GPT and asked to output similar molecules together. Volunteers can build either the given molecules or other molecules that are similar to the previous one. 
-The images are collected on clear backgrounds, and for each molecule images with different camera angles and distances are captured.  
+\subsubsection{Training and Validation Set}
+We created a mobile application using React.js for data collection. To increase the efficiency of data collection, we group similar models using the GPT: a list of the names of the molecules is given to the GPT and asked to output similar molecules together. Users can build either the given molecules or other molecules that are similar to the previous one. 
+
+We separated the training set and validation set by chemical ID (i.e. images of the same molecules will only appear in either the training set or validation set.) The validation set is randomly sampled from the dataset 5 times and the training process for the average of the 5 runs is shown in Figure X.
+
+The images are collected on clear backgrounds, and for each molecule images with different camera angles and distances are captured. In total, we have a total of X images of Y molecules.  
+
+\subsubsection{Testing Set}
+To avoid potential information leakage, the testing set is collected separately. 
 \subsection{Machine Learning Model}
-Training a model from randomly initialized parameters is time-consuming, ... 
-Our model has an encoder and decoder, the decoder is extracted from \cite{swinocsr} and we tested different sizes Efficient-Net-V2 \cite{effv2}, Swin Transformer \cite{swinocsr}, and MaxViT \cite{tu_maxvit:_2022} for our encoder. The image encoder is from Torch Vision and pre-trained on ImageNet-1K. 
-\subsection{Mutli-image input}
-\section{Results} 
+Our model architecture is very similar to the ones used in DECIMER.ai \cite{decimer} and Swin-OCSR \cite{swinocsr}. The encoder we used is the EfficientNet-V2-S \cite{effv2} and the decoder we used is adapted from Swin-OCSR \cite{swinocsr}. 
+
+\subsection{Beam search and Mutli-image input}
+
+
+We observed\footnote{In this subsection, if not specifically mentioned, we tested the result on the validation set because hyperparameter tuning is needed.} that as the number of beams ($k$) increased, the top-$k$ accuracy increased (Figure x), and the top-1 accuracy decreased. This is a common issue for beam search as beam search tends to prefer shorter sequences. \cite{yang_breaking_2018} We examined the relationship between $k$ and generated sequence length as shown in Figure x, and this (confirmed) this phenomenon. To solve this issue, we applied the word reward method proposed in \cite{he_improved_2016}. We tested different $r$ values on the validation set. 
+\section{Results}
+A table of x shows different images and y shows different beams and 2 graphs one showing the top 1 one showing the top beam.  
+also test the speed on edge computing also show the different axis
+compare the accuracy of different types of molecules
+top 1 vs top n (beam)
 \section{Conclusion}
-\section{Furture Work}
-In this project, we did not attempt to recognize chirality and E/Z stereochemical  ..., which is important and the character of 3D models 
-The real-world dataset is limited by time and budget, a larger dataset could increase the perfomance
-We did not test how well this method will 
-Traditional molecular models have some limitations, such as... Alternative models like Snaptoms, train other models, etc
+\section{Demo}
+\section{Limation and Future Work}
+In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. 
+Additionally, we used multi-image input to increase the accuracy of the model by doing answer voting on the generated sequence. However, ensembling the probability distribution for each token might be a more advanced and better approach, further experiments are needed to select the best approach.
+Our real-world dataset is limited by time and budget, a larger dataset could increase the accuracy and robustness of the model. It could also make 3d stereochemical information more recognizable.
+This project only focused on the technical side of the problem and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
+Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds\cite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\cite{snatoms}, might be able to provide better education values.
 \section*{Acknowledgement}
+The author wants to thank Dr. Brian Ganley from the Chemistry Department of the University of Missouri-Columbia for providing use cases and other advice on this project; Dr. Hung-yi Lee from National Taiwan University and Dr. Mu Li from Amazon for their illuminating lectures on YouTube played an essential role in the process of this project; Peizhi Yan and Dr. Shan Du from the University of British Columbia for mentoring in the process; and Beiliang Zhao from UBC for peer discussion.
+
+The creation of this project was aided by OpenAI ChatGPT and Google Gemini, which contributed to tasks including but not limited to brainstorming, troubleshooting, writing feedback, and coding support.
+
 The computation of this work is mainly performed on UBC Advanced Research Computing, DOI: 10.14288/SOCKEYE.
 
-The author wants to thank Dr. Brian Ganley from the Chemistry Department of the University of Missouri-Columbia for providing use cases and other advice on this project; Dr. Hung-yi Lee from National Taiwan University and Dr. Mu Li from Amazon for their illuminating lectures on YouTube played an essential role in the process of this project; Beiliang Zhao, Peizhi Yan, and Dr. Shan Du from University of British Columbia for mentoring in the process. 
-
-The creation of this project was aided by OpenAI ChatGPT, which contributed to tasks including but not limited to brainstorming, troubleshooting, and coding support.
-\bibliography{ref}
+% \IEEEpeerreviewmaketitle
+\printbibliography
 \end{document}
+
+
