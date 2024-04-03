@@ -31,7 +31,10 @@ The abstract goes here.
 
 
 \section{Introduction}
-Molecular models are helpful tools in chemistry education as they provide an intuitive way for students to understand the 3D structure compared to 2D molecular structure representation. These models can also assist students with 3D mental operations. Although virtual models could be as effective as concrete models, concrete should be available to students at least at the beginning of the study of new concepts and ideas, as humans sometimes rely on concrete objects.\autocite{savec_evaluating_2005} However, digital model representation has the benefit that allowing students to look up more information about the molecule such as the IUPAC name and the boiling point. Students can also modify the molecule and observe how it will affect the molecular properties. Thus, it will be beneficial if students can convert concrete molecular models to digital representations. 
+Molecular models are helpful tools in chemistry education as they provide an intuitive way for students to understand the 3D structure compared to 2D molecular structure representation. These models can also assist students with 3D mental operations. 
+% Although virtual models could be as effective as concrete models, concrete should be available to students at least at the beginning of the study of new concepts and ideas, as humans sometimes rely on concrete objects.\autocite{savec_evaluating_2005} 
+A study \cite{savec_evaluating_2005} found that virtual models could has the same effectivness as concrete models, students should have access to concrete models at least at the begining of study because sometimes human rely on concrete objects.  
+However, digital model representation has the benefit that allowing students to look up more information about the molecule such as the IUPAC name and the boiling point. Students can also modify the molecule and observe how it will affect the molecular properties. Thus, it will be beneficial if students can convert concrete molecular models to digital representations. 
 
 Although there are models that can convert 2D molecular structure representations to corresponding digital representations \autocite{swinocsr}\autocite{decimer}\autocite{chempix}, to the best of our knowledge, there is not a model for 3D molecular models. It will be beneficial to chemical education to close this gap between 3D molecular models and digital representations. 
 
@@ -69,15 +72,11 @@ Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks
 \begin{figure}
     \centering
     \includegraphics[width=0.3\textwidth]{generated}
-    \caption{A rendered image of 2,4-Dichlorobiphenyl}
-    \label{fig:enter-label}
-\end{figure}
-\begin{figure}
-    \centering
     \includegraphics[width=0.3\textwidth]{cap}
-    \caption{A real captured image of 2-Chloro-4-methylpentane}
+    \caption{A super resolution image of 2,4-Dichlorobiphenyl and real captured image of 2-Chloro-4-methylpentane}
     \label{fig:enter-label}
 \end{figure}
+
 We downloaded a set of compounds from PubChem \autocite{kim_pubchem_2023}, and then these compounds were filtered such that the compounds have at most X atoms \footnote{We did not directly limit the number of atoms on PubChem queries: we limited the number of heavy atoms and molecular weight, which yielded in the limitation of atoms.} and only contains elements of C, O, S, H, N, Cl, Br, F, and P.
 After filtering, there are 79,369 compounds in the dataset. We created a Blender Python Script to render these compounds into 3D molecular images. OpenAI ChatGPT was used to write the building blocks (API Wrapper) and some logic of the script. The colour of each atom follows the CPK colouring convention and was according to a couple of online sources and 3D molecular models on the market. For each molecule, we rendered 4 different images at different angles. Detailed render process can be found in our GitHub repository. 
 \subsection{Real-World Dataset}
@@ -94,16 +93,23 @@ We pretrain our model on the synthetic dataset with AdamW \cite{adamw} and expon
 
 We then fine tune our model on the real-world dataset. With the fixed validation set, we did a hyperparamater sweep using Weight and Bias \autocite{wandb}
 \subsection{Beam search and Mutli-image input}
+Beam search is a way to increase the accuracy of autoregressive models. \cite{yang_breaking_2018} \cite{zhang_beam_2024} 
 
-
-We observed\footnote{In this subsection, if not specifically mentioned, we tested the result on the validation set because hyperparameter tuning is needed.} that as the number of beams ($k$) increased, the top-$k$ accuracy increased (Figure x), and the top-1 accuracy decreased. This is a common issue for beam search as beam search tends to prefer shorter sequences. \autocite{yang_breaking_2018} We examined the relationship between $k$ and generated sequence length as shown in Figure x, and this (confirmed) this phenomenon. To solve this issue, we applied the word reward method proposed in \autocite{he_improved_2016}. We tested different $r$ values on the validation set. 
 \section{Results}
-A table of x shows different images and y shows different beams and 2 graphs one showing the top 1 one showing the top beam.  
-also test the speed on edge computing also show the different axis
+We observed\footnote{In this subsection, if not specifically mentioned, we tested the result on the validation set because hyperparameter tuning is needed.} the sequence level accuracy of the model output on the validation set with different numbers of beams and images.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.3\textwidth]{top1.png}
+    \includegraphics[width=0.3\textwidth]{topn.png}
+    \caption{Top 1 and Top-\textit{beam} Sequence Level Accuray (accuracy$\pm$95\%CI)}
+    \label{fig:enter-label}
+\end{figure}
+
+
 compare the accuracy of different types of molecules
-top 1 vs top n (beam)
 \section{Conclusion}
 \section{Demo}
+We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}} with a frontend and open source our model on github\footnote{\url{https://github.com/weathon/3d2smile}}. 
 \section{Limation and Future Work}
 In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. 
 % Additionally, we used multi-image input to increase the accuracy of the model by doing answer voting on the generated sequence. However, ensembling the probability distribution for each token might be a more advanced and better approach, further experiments are needed to select the best approach.
