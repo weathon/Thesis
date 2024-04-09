@@ -53,9 +53,9 @@ To the best of our knowledge, there is no prior model that can convert a 3D mole
 \subsection{DECIMER.ai}
 In DECIMER.ai, the encoder is an EfficientNet-V2-M. EfficientNet is a type of convolutional neural network (CNN) with MBConv \autocite{tan_efficientnet:_2020} (a modified version of the inverted bottleneck from \autocite{mobilenet}) and Fused-MBConv \autocite{suyog_efficientnet-edgetpu:_2019} developed by training-aware neural architecture search (NAS). \autocite{swin_tran} \autocite{effv2} MBConvs have 1x1 point-wise and 3x3 depth-wise convolutional layers, which can yield better parameters and computational efficiency. \autocite{mobilenet} \autocite{effv2} However, they cannot fully utilize modern hardware accelerators. In Efficient-Net-V2, they proposed using regular 3x3 convolutional layers (Fused-MBConvs) to replace MBConvs for the early stages of the network. This results in better training time with small overheads of parameters and FLOPs. In an MBConv block used in Efficient-Net-V2, the image is first passed through a 1x1 convolutional layer to increase its channel numbers, then a squeeze and excitation (SE) block is used \autocite{hu_squeeze-and-excitation_2019}\autocite{tan_efficientnet:_2020}. SE blocks are shown to increase the performance of CNNs with slight computational overhead. \autocite{hu_squeeze-and-excitation_2019}. The SE block is followed by a depthwise 3x3 convolution and a 1x1 convolution, the latter decreases the channel counts to the same as input. In a Fused-MBConv, however, the depthwise convolution and the 1x1 convolution are replaced by a 3x3 convolution. \autocite{effv2} \autocite{mobilenet}
 
-The decoder in DECIMER.ai is a transformer model based on \autocite{attention_is_all_you_need}. It has four transformer encoder blocks and four transformer decoder blocks with right parallel attention heads. \autocite{decimer} The encoder of the transformer utilizes a multi-head self-attention block and an MLP (multilayer perceptron) to replace previous recurrent neural or convolutional layers. The decoder of the Transformer is auto-regressive, meaning the decoder of the model takes in the already generated sequence and predicts the next token. The generated sequence will be processed by a masked multi-head self-attention. The mask will prevent the model from attending tokens after $t$ when generating the $t$-th sequence. Then a cross-attention layer is applied that connects the input sequence and the generated sequence by using the output of the encoder as keys and values and output from the masked self-attention as the query. Then the output of the cross-attention is followed by an MLP layer. The encoder and decoder blocks are repeated for $N$ (In DECIMER.ai $N=4$) times each. After the last decoder block, the output goes through a linear and a softmax layer before output. Since attention does not consider position information, position encoding is added to the sequence for both input and generated sequences. The full transformer also uses residual connection across all the attention and MLP layers. After the addition of the residual connection, a layer normalization is used. A detailed architecture of the Transformer can be found in the original paper \autocite{attention_is_all_you_need}.
-% should i cite attention here
+The decoder in DECIMER.ai is a transformer model based on \autocite{attention_is_all_you_need}. It has four transformer encoder blocks and four transformer decoder blocks with right parallel attention heads. \autocite{decimer} The encoder of the transformer utilizes a multi-head self-attention block and an MLP (multilayer perceptron) to replace previous recurrent neural or convolutional layers. The decoder of the Transformer is auto-regressive, meaning the decoder of the model takes in the already generated sequence and predicts the next token. The generated sequence will be processed by a masked multi-head self-attention. The mask will prevent the model from attending tokens after $t$ when generating the $t$-th sequence. Then a cross-attention layer is applied that connects the input sequence and the generated sequence by using the output of the encoder as keys and values and output from the masked self-attention as the query. Then the output of the cross-attention is followed by an MLP layer. The encoder and decoder blocks are repeated for $N$ (In DECIMER.ai $N=4$) times each. After the last decoder block, the output goes through a linear and a softmax layer before output. Since attention does not consider position information, position encoding is added to the sequence for both input and generated sequences. The full transformer also uses residual connection across all the attention and MLP layers. After the addition of the residual connection, a layer normalization is used. A detailed architecture of the Transformer can be found in the original paper \autocite{attention_is_all_you_need}. 
 
+Although DeepSMILES \cite{oboyle_deepsmiles:_2018} has been proposed for machine learning models to generate more valid identifies, their pervous work \cite{rajan_performance_2022} has shown that SMILES actually lead to the most accurate identifiers. Thus, they used SMILES instead of DeepSMILES in DECIMER.ai. \cite{decimer}  
 %how it trained on real data and handwritten 
 \subsection{Swin-OCSR}
 In Swin-OCSR, the encoder (they referred to as "backbone" in their paper) is built on the Swin Transformer. The image is cut into patches with each path having a size of $4 \times 4$ pixels. Then each patch is flattened into and treated as a token which is a 48-dim vector. Then a linear projection layer is applied and each token is into a 192-dim space. 
@@ -65,7 +65,7 @@ Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks
 % Before the tensor ($H_i \times W_i \times C_i$) gets passed to the next Swin Transformer block, a patch merging operation is performed to capture hierarchical information. During path merging, neighbouring $2 \times 2$ patches are merged and the tokens are concatenated. This results in $\frac{1}{4}$ of the number of patches and each $4C_i$ feature for each token. Then the dimensions of each token are reduced to $2C_i$. In Swin-OCSR, 4 Swin Transformer blocks are used; the last Swin Transformer block outputs a tensor with shape $\frac{H}{32} \times \frac{H}{32} \times 1536$. This tensor is flattened across the spatial axes and projects the last axis into 256 dimensions. 
 
 %how it trained using a special loss function  
-
+% deepsmiles
 
 \section{Method}
 \subsection{Synthetic Dataset}
@@ -94,36 +94,22 @@ Figure \ref{fig:example} shows an example of rendered and real images. These ima
 \subsection{Machine Learning Model} 
 \begin{figure}
     \centering
-    \includegraphics{}
-    \caption{Caption}
-    \label{fig:enter-label}
+    \includegraphics[width=0.9\textwidth]{arch}
+    \caption{Model Architecture}
+    \label{fig:arch}
 \end{figure}
-Our model architecture shown in Fig \ref{arch} and  is very similar to the ones used in DECIMER.ai \autocite{decimer} and Swin-OCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with intinal parameters that trained on ImageNet-1k \autocite{imagenet}. We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$  for each batch. This feature map is then flatten into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$, projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then feeded into our decoder. which is adapted from Swin-OCSR \autocite{swinocsr}. 
+Our model architecture shown in Fig \ref{fig:arch} and  is very similar to the ones used in DECIMER.ai \autocite{decimer} and Swin-OCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with intinal parameters that trained on ImageNet-1k \autocite{imagenet}. We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$  for each batch. This feature map is then flatten into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$, projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then feeded into our decoder. which is adapted from Swin-OCSR \autocite{swinocsr}. 
 
 
 We pretrain our model on the synthetic dataset with AdamW \cite{adamw} and exponential learning rate scheduler. Hyperparameters are adjusted manuually and the training is stoped when token-level accuracy converges. 
 
-We then fine tune our model on the real-world dataset. With the fixed validation set, we did a hyperparamater sweep using Weight and Bias \autocite{wandb} to select models with highest validation token-level accuracy. Hyper parameter search space is shown in Table \ref{tab:hyper}.
-
-\begin{table}[]
-    \centering
-    \begin{tabular}{|c|c|}
-    \hline
-     Hyperparameter Name  & Range  \\ \hline
-      Learning Rate   &  0.0005-0.001 \\
-      Learning Rate Decay & 0.95-1\\
-      Epoch &  1-4\\
-      Dropout between encoder and decoder &  0.0-0.5\\\hline
-    \end{tabular}
-    \caption{Hyper Parameter Search Space}
-    \label{tab:hyper}
-\end{table}
+We then fine tune our model on the real-world dataset. With the fixed validation set, we did a hyperparamater sweep using Weight and Bias \autocite{wandb} to select models with highest validation token-level accuracy. Then the hyper-parameter is furture finetuned manually. 
 
 \subsection{Beam search and Mutli-image input}
 Beam search is a way to increase the accuracy of autoregressive models. \cite{yang_breaking_2018} \cite{zhang_beam_2024} 
-
+We also hyprothesis that multiple images input will increase the accuracy of the model, shich has shown in pervious research \cite{sun_multi-input_2017}. In \cite{sun_multi-input_2017}, the authors use ``early fusion" method where feature maps from 3 different images are concatenated on channel axis in the early stage of network. However, this method requires modification of the backbone network and the number of images in this method are fixed. Instead, our method passes individual images through the entire network (including the EfficientNet-V2-S and SwinOCSR decoder) and average the softmax distribution of tokens.  
 \section{Results}
-We tested how the perfomance of our model behevious with different beam size and number of images on a subset of validation set. 
+We tested how the perfomance of our model behevious with different beam size and number of images on a subset of validation set with only molecules that has at least 5 images. 
 \begin{figure}
     \centering
     \includegraphics[width=0.3\textwidth]{top1.png}
@@ -134,13 +120,15 @@ We tested how the perfomance of our model behevious with different beam size and
 
 
 compare the accuracy of different types of molecules
+compare with hand written OCSR 
 \section{Conclusion}
 \section{Demo}
 We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}} with a frontend and open source our model on github\footnote{\url{https://github.com/weathon/3d2smile}}. 
 \section{Limation and Future Work}
 In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. 
 % Additionally, we used multi-image input to increase the accuracy of the model by doing answer voting on the generated sequence. However, ensembling the probability distribution for each token might be a more advanced and better approach, further experiments are needed to select the best approach.
-Our real-world dataset is limited by time and budget, a larger dataset could increase the accuracy and robustness of the model. It could also make 3d stereochemical information more recognizable.
+Our real-world dataset is limited by time and budget, a larger dataset could increase the accuracy and robustness of the model. 
+%It could also make 3D stereochemical information more recognizable. gpt?
 This project only focused on the technical side of the problem and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
 Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds\autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, might be able to provide better education values.
 \section*{Acknowledgement}
