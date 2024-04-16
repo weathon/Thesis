@@ -68,6 +68,7 @@ Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks
 % deepsmiles
 
 The decoder of SwinOCSR is also a transformer encoder-decoder pair with 6 blocks of encoders and 6 blocks of decoders. 
+\subsection{Image Text Matching Text Matching Contrastive Loss }
 
 \section{Method}
 In addition, DECIMER.ai also attempted to recognize hand-drawn structures by finetuning the model with a dataset that has augmented data that makes structures look hand-drawn. \autocite{decimer} We adapted this two-stage training process in our project. The model is first trained on a synthetic (3D rendered) dataset and then finetuned on a real-world collected dataset to reduce the amount of real-world data that needs to be collected as they are expensive.  
@@ -103,7 +104,10 @@ Figure \ref{fig:example} shows an example of rendered and real images. These ima
     \caption{Model Architecture}
     \label{fig:arch}
 \end{figure}
-Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the ones used in DECIMER.ai \autocite{decimer} and SwinOCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with internal parameters that are trained on ImageNet-1k \autocite{imagenet}. We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$  for each batch. This feature map is then flattened into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$, projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then fed into our decoder. which is adapted from SwinOCSR \autocite{swinocsr}. Since the decoder is trained in SwinOCSR with relatively high performance, it is ``frozen"  (in PyTorch set \verb|require_grad=False|) during the training process. A pipeline of our training process can be found in Figure \ref{pipeline}.
+Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the ones used in DECIMER.ai \autocite{decimer} and SwinOCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with internal parameters that are trained on ImageNet-1k \autocite{imagenet}. We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$  for each batch. This feature map is then flattened into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$, projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then fed into our decoder. which is adapted from SwinOCSR \autocite{swinocsr}. Since the decoder is trained in SwinOCSR with relatively high performance, it is ``frozen"  (in PyTorch set \verb|requires_grad=False|)
+
+% WRONG IT SHOUL DBE REQUIRES!!!!!!!!! ALL WRONG 
+during the training process. A pipeline of our training process can be found in Figure \ref{pipeline}.
 \begin{figure}
     \centering
     \includegraphics[width=0.75\textwidth]{Pipeline.drawio.png}
@@ -114,8 +118,9 @@ Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the
 Since we have a small dataset for fine-tuning, we applied many random online data augmentation during the training process: random rotation, random flipping, random cropping,  and random colour jitter (including RGB channels and brightness). 
 % We did not use random noise as it seems leading to poor perfomance in the resulted model. We hypothesize  this is due to the domain shift between the training data (with noise) and validation data (without noise). 
 
-We train our model on the synthetic dataset with AdamW \autocite{adamw} and an exponential learning rate scheduler. We then fine-tune our model on the real-world dataset. With the fixed validation set, we did a hyperparameter search using both Weight and Bias \autocite{wandb} and manual tuning to select models with the highest validation token-level accuracy.  Similar to the pretraining, the decoder is frozen. 
-Additionally, we also freeze the projection layer between the encoder and decoder and the last 2 blocks of encoder EfficientNet-V2-S since the input of the decoder is in the same domain for pre-training and finetuning. This could also decrease the number of trainable parameters to avoid overfitting. 
+We train our model on the synthetic dataset with AdamW \autocite{adamw} and an exponential learning rate scheduler. We then fine-tune our model on the real-world dataset. With the fixed validation set, we did a hyperparameter search using both Weight and Bias \autocite{wandb} and manual tuning to select models with the highest validation token-level accuracy.  
+% Similar to the pretraining, the decoder is frozen. 
+Additionally, we also freeze the projection layer between the encoder and reladecoder and the last 2 blocks of encoder EfficientNet-V2-S since the input of the decoder is in the same domain for pre-training and finetuning. This could also decrease the number of trainable parameters to avoid overfitting. 
 After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset later.
 
 \subsection{Beam search and Mutli-image input}
@@ -156,7 +161,7 @@ We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}
 In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. 
 Our real-world dataset is limited by time and budget, a larger dataset could increase the accuracy and robustness of the model. 
 This project only focused on the technical side of the problem and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
-Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds\autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, and might be able to provide better education values.
+Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds when they are not \autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, might be able to provide better education values.
 \section*{Acknowledgement}
 The author wants to thank Dr. Brian Ganley from the Chemistry Department of the University of Missouri-Columbia for providing use cases and other advice on this project; Dr. Hung-yi Lee from National Taiwan University and Dr. Mu Li and Dr. Yi Zhu from Amazon for their illuminating lectures on YouTube played an essential role in the process of this project; Peizhi Yan and Dr. Shan Du from the University of British Columbia for mentoring in the process; and Beiliang Zhao from UBC for peer discussion.
 
