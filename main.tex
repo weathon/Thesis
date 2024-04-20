@@ -1,8 +1,8 @@
 \documentclass{article}
 \usepackage{graphicx} % Required for inserting images
 \usepackage[style=ieee]{biblatex}
-\usepackage[letterpaper, total={7in, 9in}]{geometry}
 \addbibresource{ref.bib}
+\usepackage[letterpaper, total={7in, 9in}]{geometry}
 \renewcommand*{\bibfont}{\footnotesize}
 
 \begin{document}
@@ -42,6 +42,8 @@ Our contribution to this paper can be summarised as:
 \item We have constructed two datasets: one computer-rendered 3D molecular model and another consisting of real-world 3D molecular models.
 \item We trained a model on top of these two datasets that is capable of converting images of concrete molecular models into their respective SMILES notations. 
 \item We applied a method based on multi-image input and beam search to increase the accuracy of the output.
+\item We make the model to re-evoluet its own output to select more clbarated result, self negative
+% can we use this for seg? review the segmented images
 % \item We applied a multi-image input method allowing users to capture multiple images of the molecular model to increase the accuracy of the output.
 \end{itemize}
 
@@ -84,7 +86,7 @@ In addition, DECIMER.ai also attempted to recognize hand-drawn structures by fin
 We downloaded a set of compounds from PubChem \autocite{kim_pubchem_2023}, and then these compounds were filtered based on heavy atoms and molecular weights and only contained elements of C, O, S, H, N, Cl, Br, F, and P. Because of the complex 3D nature of molecules, there could be occlusions between atoms and bonds, where important information is hidden in the image. Although there are methods to avoid `occlusions by some spatial algorithm or human selection, we decided to remove 3D spatial information in the pretraining stage. Thus, we downloaded the 2D coordinate from PubChem instead of 3D.  
 % filtered such that the compounds have at most X atoms \footnote{We did not directly limit the number of atoms on PubChem queries: we limited the number of heavy atoms and molecular weight, which yielded in the limitation of atoms.} 
 After filtering, there are 79,369 compounds in the dataset. The pre-train training and validation sets are separated by image IDs. We created a Blender Python Script to render these compounds into 3D molecular images. OpenAI ChatGPT was used to write the building blocks (API Wrapper) and some logic of the script. The colour of each atom follows the CPK colouring convention and was according to a couple of online sources and 3D molecular models on the market. For each molecule, we rendered 4 different images at different angles. Detailed render process can be found in our GitHub repository. 
-
+% self negative example: gan
 % Rendered from 2D information ....
 
 %redo
@@ -104,16 +106,17 @@ Figure \ref{fig:example} shows an example of rendered and real images. These ima
     \caption{Model Architecture}
     \label{fig:arch}
 \end{figure}
-Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the ones used in DECIMER.ai \autocite{decimer} and SwinOCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with internal parameters that are trained on ImageNet-1k \autocite{imagenet}. We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$  for each batch. This feature map is then flattened into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$, projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then fed into our decoder. which is adapted from SwinOCSR \autocite{swinocsr}. Since the decoder is trained in SwinOCSR with relatively high performance, it is ``frozen"  (in PyTorch set \verb|requires_grad=False|)
+Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the ones used in DECIMER.ai \autocite{decimer} and SwinOCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with internal parameters that are trained on ImageNet-1k \autocite{imagenet}. We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$  for each batch. This feature map is then flattened into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$, projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then fed into our decoder. which is adapted from SwinOCSR \autocite{swinocsr}. 
+% Since the decoder is trained in SwinOCSR with relatively high performance, it is ``frozen"  (in PyTorch set \verb|requires_grad=False|)
 
 % WRONG IT SHOUL DBE REQUIRES!!!!!!!!! ALL WRONG 
-during the training process. A pipeline of our training process can be found in Figure \ref{pipeline}.
-\begin{figure}
-    \centering
-    \includegraphics[width=0.75\textwidth]{Pipeline.drawio.png}
-    \caption{Training Pipeline}
-    \label{pipeline}
-\end{figure}
+% during the training process. A pipeline of our training process can be found in Figure \ref{pipeline}.
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.75\textwidth]{Pipeline.drawio.png}
+%     \caption{Training Pipeline}
+%     \label{pipeline}
+% \end{figure}
 
 Since we have a small dataset for fine-tuning, we applied many random online data augmentation during the training process: random rotation, random flipping, random cropping,  and random colour jitter (including RGB channels and brightness). 
 % We did not use random noise as it seems leading to poor perfomance in the resulted model. We hypothesize  this is due to the domain shift between the training data (with noise) and validation data (without noise). 
@@ -164,6 +167,8 @@ This project only focused on the technical side of the problem and did not test 
 Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds when they are not \autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, might be able to provide better education values.
 \section*{Acknowledgement}
 The author wants to thank Dr. Brian Ganley from the Chemistry Department of the University of Missouri-Columbia for providing use cases and other advice on this project; Dr. Hung-yi Lee from National Taiwan University and Dr. Mu Li and Dr. Yi Zhu from Amazon for their illuminating lectures on YouTube played an essential role in the process of this project; Peizhi Yan and Dr. Shan Du from the University of British Columbia for mentoring in the process; and Beiliang Zhao from UBC for peer discussion.
+
+I would also want to thank my cat, Yiyang Du, for providing emotional support during this project. 
 
 The creation of this project was aided by OpenAI ChatGPT and Google Gemini, which contributed to tasks including but not limited to brainstorming, troubleshooting, writing feedback, and coding support.
 
