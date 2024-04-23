@@ -2,7 +2,8 @@
 \usepackage{graphicx} % Required for inserting images
 \usepackage[style=ieee]{biblatex}
 \addbibresource{ref.bib}
-\usepackage[letterpaper, total={7in, 9in}]{geometry}
+\usepackage[letterpaper]{geometry}
+% \usepackage[letterpaper, total={7in, 9in}]{geometry}
 \renewcommand*{\bibfont}{\footnotesize}
 
 \begin{document}
@@ -42,7 +43,7 @@ Our contribution to this paper can be summarised as:
 \item We have constructed two datasets: one computer-rendered 3D molecular model and another consisting of real-world 3D molecular models.
 \item We trained a model on top of these two datasets that is capable of converting images of concrete molecular models into their respective SMILES notations. 
 \item We applied a method based on multi-image input and beam search to increase the accuracy of the output.
-\item We make the model to re-evoluet its own output to select more clbarated result, self negative
+\item We proposed for the model to re-evoluet its own output to select more clbarated result, self negative
 % can we use this for seg? review the segmented images
 % \item We applied a multi-image input method allowing users to capture multiple images of the molecular model to increase the accuracy of the output.
 \end{itemize}
@@ -61,7 +62,7 @@ Although DeepSMILES \autocite{oboyle_deepsmiles:_2018} has been proposed for mac
 %how it trained on real data and handwritten 
 \subsection{SwinOCSR}
 In SwinOCSR, the encoder (they referred to as "backbone" in their paper) is built on the Swin Transformer. The image is cut into patches with each path having a size of $4 \times 4$ pixels. Then each patch is flattened into and treated as a token which is a 48-dim vector. Then a linear projection layer is applied and each token is into a 192-dim space. 
-Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks are used. Each swim transformer block contains two regular transformer modules. In the first transformer module, Window Mutli-head Self Attention (W-MSA) is performed within each window, which is a group of neighbouring tokens. In the second transformer module, the Shifted Window Mutli-head Self Attention (SW-MSA) is performed on a shift-ed window. The W-MSA allows the model to capture the local relationship in the image, and the SW-MSA introduced a cross-window connection while maintaining efficiency. After each block, a patch merging operation is performed such that neighbouring patches are merged and the tokens are contacted. \autocite{swin_tran} \autocite{swinocsr}
+Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks are used. Each swim transformer block contains two regular transformer modules. In the first transformer module, Window Mutli-head Self Attention (W-MSA) is performed within each window, which is a group of neighbouring tokens. In the second transformer module, the Shifted Window Mutli-head Self Attention (SW-MSA) is performed on a shift-ed window. The W-MSA allows the model to capture the local relationship in the image, and the SW-MSA introduced a cross-window connection while maintaining efficiency. After each block, a patch merging operation is performed such that neighbouring patches are merged and the tokens are contacted. \autocite{swin_tran} The decoder of SwinOCSR is very similar to the decoder in DECIMER.ai, which is also a transformer encoder-decoder pair but with 6 blocks of encoders and 6 blocks of decoders. \cite{swinocsr}
 
 % Moved down here To this point, we get a tensor of $\frac{H}{4} \times \frac{W}{4} \times 48$ where $W$ and $H$ are the width and height of the original image. 
 % Before the tensor ($H_i \times W_i \times C_i$) gets passed to the next Swin Transformer block, a patch merging operation is performed to capture hierarchical information. During path merging, neighbouring $2 \times 2$ patches are merged and the tokens are concatenated. This results in $\frac{1}{4}$ of the number of patches and each $4C_i$ feature for each token. Then the dimensions of each token are reduced to $2C_i$. In SwinOCSR, 4 Swin Transformer blocks are used; the last Swin Transformer block outputs a tensor with shape $\frac{H}{32} \times \frac{H}{32} \times 1536$. This tensor is flattened across the spatial axes and projects the last axis into 256 dimensions. 
@@ -69,8 +70,10 @@ Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks
 %how it trained using a special loss function  
 % deepsmiles
 
-The decoder of SwinOCSR is also a transformer encoder-decoder pair with 6 blocks of encoders and 6 blocks of decoders. 
-\subsection{Image Text Matching Text Matching Contrastive Loss }
+
+% \subsection{Re-evoluate the Results After Generation}
+
+
 
 \section{Method}
 In addition, DECIMER.ai also attempted to recognize hand-drawn structures by finetuning the model with a dataset that has augmented data that makes structures look hand-drawn. \autocite{decimer} We adapted this two-stage training process in our project. The model is first trained on a synthetic (3D rendered) dataset and then finetuned on a real-world collected dataset to reduce the amount of real-world data that needs to be collected as they are expensive.  
@@ -100,6 +103,7 @@ The images are collected on clear backgrounds, and for each molecule images with
 
 Figure \ref{fig:example} shows an example of rendered and real images. These images are images from the dataset after super-resolution for better visualization. 
 \subsection{Machine Learning Model} 
+\subsubsection{Basic Model}
 \begin{figure}
     \centering
     \includegraphics[width=0.9\textwidth]{arch}
@@ -107,31 +111,33 @@ Figure \ref{fig:example} shows an example of rendered and real images. These ima
     \label{fig:arch}
 \end{figure}
 Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the ones used in DECIMER.ai \autocite{decimer} and SwinOCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with internal parameters that are trained on ImageNet-1k \autocite{imagenet}. We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$  for each batch. This feature map is then flattened into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$, projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then fed into our decoder. which is adapted from SwinOCSR \autocite{swinocsr}. 
-% Since the decoder is trained in SwinOCSR with relatively high performance, it is ``frozen"  (in PyTorch set \verb|requires_grad=False|)
 
-% WRONG IT SHOUL DBE REQUIRES!!!!!!!!! ALL WRONG 
-% during the training process. A pipeline of our training process can be found in Figure \ref{pipeline}.
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=0.75\textwidth]{Pipeline.drawio.png}
-%     \caption{Training Pipeline}
-%     \label{pipeline}
-% \end{figure}
+\subsection{Improve Accuracy By Self-Reflection}
+%should i put this in related works
+It has been shown that in Large Language Models (LLMs), it might be hard for the model to output useful and safe information, but it is easy for the model to find it after re-evoluating it. \autocite{bai_constitutional_2022} Simlar ideas have been shown in some image-text generative models such as DALL-E \autocite{ramesh_zero-shot_2021} and CLIPasso \autocite{vinker_clipasso_2022} where another model (in this two cases, CLIP \autocite{radford_learning_2021}) to evoluate the output of the model and select the best output in the generated. There are also some image-text matching evolution metrics being proposed such as CLIPScore \autocite{hessel_clipscore:_2022} and image-text matching loss \autocite{xu_attngan:_2017} to evoluate the simlarity between text and image. 
 
-Since we have a small dataset for fine-tuning, we applied many random online data augmentation during the training process: random rotation, random flipping, random cropping,  and random colour jitter (including RGB channels and brightness). 
-% We did not use random noise as it seems leading to poor perfomance in the resulted model. We hypothesize  this is due to the domain shift between the training data (with noise) and validation data (without noise). 
+However, CLIP is a contrasive learning model: for a given number of image-text pairs, feature of each image and text is extreacted by its coressponding encoder, then in the embeding space, it is treated as a muti-class classification problem to match each image with coresponding text. \cite{radford_learning_2021} Thus, it usually requires a large number of negative samples in the batch for the model to learn useful information. \autocite{he_momentum_2020} Although there are models like Momentum Contrast  (MoCo) \autocite{he_momentum_2020} to build a large negative sample queue using a smaller batch size by momentum for pure image tasks, it is hard to use such strategy for multimodality tasks involving both text and images. 
 
-We train our model on the synthetic dataset with AdamW \autocite{adamw} and an exponential learning rate scheduler. We then fine-tune our model on the real-world dataset. With the fixed validation set, we did a hyperparameter search using both Weight and Bias \autocite{wandb} and manual tuning to select models with the highest validation token-level accuracy.  
-% Similar to the pretraining, the decoder is frozen. 
-Additionally, we also freeze the projection layer between the encoder and reladecoder and the last 2 blocks of encoder EfficientNet-V2-S since the input of the decoder is in the same domain for pre-training and finetuning. This could also decrease the number of trainable parameters to avoid overfitting. 
-After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset later.
+Image-text matching loss (being used in many multimodality models, such as \autocite{li_align_2021} \autocite{liao_evaluation_2023}\autocite{xu_attngan:_2017}), on the other hand, dose not treat this problem as a muti-class classification problem but a binary clasification problem. 
+
+% \cite{radford_learning_2021}, Vision-and-Language Transformer (ViLT, uses ITM) \cite{kim_vilt:_2021}, and Align before Fuse (Albef, uses ITM). 
+
+% Last token, like gpt ....
+
 
 \subsection{Beam search and Mutli-image input}
 Beam search is a way to increase the accuracy of autoregressive models. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024}. Beam search can also provide users with multiple candidate answers to choose from, similar to the top-$n$ in image classification. However, one issue with beam search is that it will favour shorter sequences as a sub-sequence will always have a higher probability than its parent sequence. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024} There are multiple methods to solve this issue, some are mentioned in \autocite{yang_breaking_2018} and \autocite{zhang_beam_2024}. In this paper, we use a simple method mentioned in \autocite{zhang_beam_2024} where we multiple  $\frac{1}{L^\alpha}$ to the log probability where $L$ is the length of the sequence. This will make the log probability of a long sequence higher (since the log probability is negative). 
 % In this project, we set \(\alpha=0.75\) as suggested in \autocite{zhang_beam_2024}.
 
 Additionally, we also hypothesize that multiple image inputs will increase the accuracy of the model. This has been shown in previous research \autocite{sun_multi-input_2017}, in which the authors use ``early fusion" method where feature maps from 3 different images are concatenated on the channel axis in the early stage of the network. However, this method requires modification of the backbone network and the number of images in this method is fixed. Instead, our method passes individual images through the entire network (including the EfficientNet-V2-S and SwinOCSR decoder) and averages the softmax distribution of tokens.  
+\subsection{Experement}
 
+Since we have a small dataset for fine-tuning, we applied many random online data augmentation during the training process: random rotation, random flipping, random cropping,  and random colour jitter (including RGB channels and brightness). 
+
+We train our model on the synthetic dataset with AdamW \autocite{adamw} and an exponential learning rate scheduler. We then fine-tune our model on the real-world dataset. With the fixed validation set, we did a hyperparameter search using both Weight and Bias \autocite{wandb} and manual tuning to select models with the highest validation token-level accuracy.  
+% Similar to the pretraining, the decoder is frozen. 
+Additionally, we also freeze the projection layer between the encoder and reladecoder and the last 2 blocks of encoder EfficientNet-V2-S since the input of the decoder is in the same domain for pre-training and finetuning. This could also decrease the number of trainable parameters to avoid overfitting. 
+After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset.
 \section{Results and Discussions} 
 There are also a few hyperparameters in inference that we need to consider: the softmax temperature ($t$), beam size ($n$), $\alpha$ in the beam search penalty for short sequences, and number of input images ($N$). We used Weight and Bias \cite{wandb} to do a random sweep with on these hyperparameters and selected the hyperparameter set with the highest score, which is defined in Equation \ref{score} where $P_{1}$ and $P_{n}$ are top-1 and top-$beam$ accuracy. We extended our validation set with some more molecules, this dataset is also filtered to remove images with occlusion and bad lighting. However, we kept some images that could be out of the domain for the model (poor lighting but atoms are still visible, and overly simplified molecule: methane) to avoid biased results from cherry-picking the data. For each molecule, take $k$ samples where $k$ is the number of images for that molecule in the dataset. For each sample, we randomly select $N$ images from the dataset without replacement. 
 
@@ -166,9 +172,9 @@ Our real-world dataset is limited by time and budget, a larger dataset could inc
 This project only focused on the technical side of the problem and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
 Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds when they are not \autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, might be able to provide better education values.
 \section*{Acknowledgement}
-The author wants to thank Dr. Brian Ganley from the Chemistry Department of the University of Missouri-Columbia for providing use cases and other advice on this project; Dr. Hung-yi Lee from National Taiwan University and Dr. Mu Li and Dr. Yi Zhu from Amazon for their illuminating lectures on YouTube played an essential role in the process of this project; Peizhi Yan and Dr. Shan Du from the University of British Columbia for mentoring in the process; and Beiliang Zhao from UBC for peer discussion.
+The author wants to thank Dr. Brian Ganley from the Chemistry Department of the University of Missouri-Columbia and Wesley Zandberg from University of British Columbia for providing use cases and other advice on this project; Dr. Hung-yi Lee from National Taiwan University and Dr. Mu Li and Dr. Yi Zhu from Amazon (now in Boson.ai) for their illuminating lectures on YouTube played an essential role in the process of this project; Peizhi Yan, Dr. Shan Du, and Islam Osman from the UBC for mentoring in the process; and Beiliang Zhao from UBC for peer discussion.
 
-I would also want to thank my cat, Yiyang Du, for providing emotional support during this project. 
+% I would also want to thank my cat, Yiyang Du, for providing emotional support during this project. 
 
 The creation of this project was aided by OpenAI ChatGPT and Google Gemini, which contributed to tasks including but not limited to brainstorming, troubleshooting, writing feedback, and coding support.
 
