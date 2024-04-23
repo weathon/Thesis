@@ -1,4 +1,34 @@
 \documentclass{article}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    float=tp,
+    floatplacement=tbp,
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
 \usepackage{graphicx} % Required for inserting images
 \usepackage[style=ieee]{biblatex}
 \addbibresource{ref.bib}
@@ -62,7 +92,7 @@ Although DeepSMILES \autocite{oboyle_deepsmiles:_2018} has been proposed for mac
 %how it trained on real data and handwritten 
 \subsection{SwinOCSR}
 In SwinOCSR, the encoder (they referred to as "backbone" in their paper) is built on the Swin Transformer. The image is cut into patches with each path having a size of $4 \times 4$ pixels. Then each patch is flattened into and treated as a token which is a 48-dim vector. Then a linear projection layer is applied and each token is into a 192-dim space. 
-Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks are used. Each swim transformer block contains two regular transformer modules. In the first transformer module, Window Mutli-head Self Attention (W-MSA) is performed within each window, which is a group of neighbouring tokens. In the second transformer module, the Shifted Window Mutli-head Self Attention (SW-MSA) is performed on a shift-ed window. The W-MSA allows the model to capture the local relationship in the image, and the SW-MSA introduced a cross-window connection while maintaining efficiency. After each block, a patch merging operation is performed such that neighbouring patches are merged and the tokens are contacted. \autocite{swin_tran} The decoder of SwinOCSR is very similar to the decoder in DECIMER.ai, which is also a transformer encoder-decoder pair but with 6 blocks of encoders and 6 blocks of decoders. \cite{swinocsr}
+Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks are used. Each swim transformer block contains two regular transformer modules. In the first transformer module, Window Mutli-head Self Attention (W-MSA) is performed within each window, which is a group of neighbouring tokens. In the second transformer module, the Shifted Window Mutli-head Self Attention (SW-MSA) is performed on a shift-ed window. The W-MSA allows the model to capture the local relationship in the image, and the SW-MSA introduced a cross-window connection while maintaining efficiency. After each block, a patch merging operation is performed such that neighbouring patches are merged and the tokens are contacted. \autocite{swin_tran} The decoder of SwinOCSR is very similar to the decoder in DECIMER.ai, which is also a transformer encoder-decoder pair but with 6 blocks of encoders and 6 blocks of decoders. In additition, SwinOCSR uses focal loss \autocite{lin_focal_2018} instead of normal cross entropy loss due to the inbalance of the tokens distribution. \cite{swinocsr}
 
 % Moved down here To this point, we get a tensor of $\frac{H}{4} \times \frac{W}{4} \times 48$ where $W$ and $H$ are the width and height of the original image. 
 % Before the tensor ($H_i \times W_i \times C_i$) gets passed to the next Swin Transformer block, a patch merging operation is performed to capture hierarchical information. During path merging, neighbouring $2 \times 2$ patches are merged and the tokens are concatenated. This results in $\frac{1}{4}$ of the number of patches and each $4C_i$ feature for each token. Then the dimensions of each token are reduced to $2C_i$. In SwinOCSR, 4 Swin Transformer blocks are used; the last Swin Transformer block outputs a tensor with shape $\frac{H}{32} \times \frac{H}{32} \times 1536$. This tensor is flattened across the spatial axes and projects the last axis into 256 dimensions. 
@@ -133,7 +163,44 @@ Image-text matching loss (being used in many multi modality models, such as \aut
     \caption{Model With Image-Text Matching}
     \label{fig:itm}
 \end{figure}
-Since the purpose of the ITM score is to find the best sequence in multiple model-generated sequences, it will be beneficial for use model's mistake as negative examples in ITM training. To achieve this, we maintain a dictionary with the values are queues of recent wrong model-generated output and keys are the correct answer. At the begining, the queue is initialized with random DeepSMILES strings in the training set and progressively being replaced by model output. By using this method, model can learn from its own mistakes. This task will also getting progressively more difficult because as the model trains, its output will get more simlar to the correct answer even when it is wrong. This process can be found in pseudocode .   
+Since the purpose of the ITM score is to find the best sequence in multiple model-generated sequences, it will be beneficial for use model's mistake as negative examples in ITM training. To achieve this, we maintain a dictionary with the values are queues of recent wrong model-generated output and keys are the correct answer. At the begining, the queue is initialized with random DeepSMILES strings in the training (we did not exclude the correct answer because it will add computational overhead and the chance of selecting the correct answer in it is very low) set and progressively being replaced by model output. By using this method, model can learn from its own mistakes. This task will also getting progressively more difficult because as the model trains, its output will get more simlar to the correct answer even when it is wrong. This pseudocode can be found in Listing \ref{selfnagative}, detail such as translating between tokenized sequences and DeepSMILES, remvobing special tokens, reshaping, are not included.   
+
+\begin{minipage}{\linewidth}
+
+\begin{lstlisting}[language=Python, caption=Training Process Pseudocode, label=selfnagative]
+mistakes = {correct:random.choices(SMILES, k=3) for correct in SMILES}
+
+# training loop
+for img, text_in, text_out in dataloader():
+    # text_in is <start>SMILES<end> text_out is SMILES<end>
+    optimizer.zero_grad()
+    outputs = model(image, text_in, predict = True)[:,:-1,:]
+    loss = focal_loss(outputs, text_out)
+    loss.backward()
+    optimizer.step()
+    
+    if outputs != text_out:
+        mistakes[text_out].append(outputs)
+        mistakes[corr].pop(0)
+    text_in = []
+    label = []
+    for i in range(BATCH_SIZE):
+        corr = text_out[i]
+        if random.random()<0.5:
+            text_in.append(corr)
+            label.append(1)
+        else:
+            text_in.append(random.choice(mistakes[corr]))
+            label.append(0)
+    optimizer.zero_grad()
+    # predict = False for binary classification 
+    outputs = model(image, text_in, predict = False)
+    # * 1.2 to give ITM loss more weight
+    loss = binary_cross_entropy_with_logits(outputs, label) * 1.2 
+    loss.backward()
+    optimizer.step()
+\end{lstlisting}
+\end{minipage}
 
 \subsection{Experiment}
 
