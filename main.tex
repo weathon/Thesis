@@ -112,25 +112,30 @@ Figure \ref{fig:example} shows an example of rendered and real images. These ima
 \end{figure}
 Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the ones used in DECIMER.ai \autocite{decimer} and SwinOCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with internal parameters that are trained on ImageNet-1k \autocite{imagenet}. We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$  for each batch. This feature map is then flattened into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$, projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then fed into our decoder. which is adapted from SwinOCSR \autocite{swinocsr}. 
 
-\subsection{Improve Accuracy By Self-Reflection}
-%should i put this in related works
-It has been shown that in Large Language Models (LLMs), it might be hard for the model to output useful and safe information, but it is easy for the model to find it after re-evoluating it. \autocite{bai_constitutional_2022} Simlar ideas have been shown in some image-text generative models such as DALL-E \autocite{ramesh_zero-shot_2021} and CLIPasso \autocite{vinker_clipasso_2022} where another model (in this two cases, CLIP \autocite{radford_learning_2021}) to evoluate the output of the model and select the best output in the generated. There are also some image-text matching evolution metrics being proposed such as CLIPScore \autocite{hessel_clipscore:_2022} and image-text matching loss \autocite{xu_attngan:_2017} to evoluate the simlarity between text and image. 
-
-However, CLIP is a contrasive learning model: for a given number of image-text pairs, feature of each image and text is extreacted by its coressponding encoder, then in the embeding space, it is treated as a muti-class classification problem to match each image with coresponding text. \cite{radford_learning_2021} Thus, it usually requires a large number of negative samples in the batch for the model to learn useful information. \autocite{he_momentum_2020} Although there are models like Momentum Contrast  (MoCo) \autocite{he_momentum_2020} to build a large negative sample queue using a smaller batch size by momentum for pure image tasks, it is hard to use such strategy for multimodality tasks involving both text and images. 
-
-Image-text matching loss (being used in many multimodality models, such as \autocite{li_align_2021} \autocite{liao_evaluation_2023}\autocite{xu_attngan:_2017}), on the other hand, dose not treat this problem as a muti-class classification problem but a binary clasification problem. 
-
-% \cite{radford_learning_2021}, Vision-and-Language Transformer (ViLT, uses ITM) \cite{kim_vilt:_2021}, and Align before Fuse (Albef, uses ITM). 
-
-% Last token, like gpt ....
-
-
-\subsection{Beam search and Mutli-image input}
+\subsection{Beam search and Multi-image input}
 Beam search is a way to increase the accuracy of autoregressive models. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024}. Beam search can also provide users with multiple candidate answers to choose from, similar to the top-$n$ in image classification. However, one issue with beam search is that it will favour shorter sequences as a sub-sequence will always have a higher probability than its parent sequence. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024} There are multiple methods to solve this issue, some are mentioned in \autocite{yang_breaking_2018} and \autocite{zhang_beam_2024}. In this paper, we use a simple method mentioned in \autocite{zhang_beam_2024} where we multiple  $\frac{1}{L^\alpha}$ to the log probability where $L$ is the length of the sequence. This will make the log probability of a long sequence higher (since the log probability is negative). 
 % In this project, we set \(\alpha=0.75\) as suggested in \autocite{zhang_beam_2024}.
 
 Additionally, we also hypothesize that multiple image inputs will increase the accuracy of the model. This has been shown in previous research \autocite{sun_multi-input_2017}, in which the authors use ``early fusion" method where feature maps from 3 different images are concatenated on the channel axis in the early stage of the network. However, this method requires modification of the backbone network and the number of images in this method is fixed. Instead, our method passes individual images through the entire network (including the EfficientNet-V2-S and SwinOCSR decoder) and averages the softmax distribution of tokens.  
-\subsection{Experement}
+
+
+\subsection{Improve Accuracy By Self-Reflection}
+%should i put this in related works
+It has been shown that in Large Language Models (LLMs), it might be hard for the model to output useful and safe information, but it is easy for the model to find it after re-evaluating it. \autocite{bai_constitutional_2022} Similar ideas have been shown in some image-text generative models such as DALL-E \autocite{ramesh_zero-shot_2021} and CLIPasso \autocite{vinker_clipasso_2022} where another model (in these two cases, CLIP \autocite{radford_learning_2021}) to evaluate multiple output of the generative model and select the best output in the generated. There are also some image-text matching evolution metrics being proposed such as CLIPScore \autocite{hessel_clipscore:_2022} and image-text matching loss \autocite{xu_attngan:_2017} to evaluate the similarity between text and image. 
+
+However, CLIP is a contrastive learning model: for a given number of image-text pairs, feature of each image and text is extracted by its corresponding encoder, then in the embedding space, it is treated as a multi-class classification problem to match each image with corresponding text. \cite{radford_learning_2021} Thus, it usually requires a large number of negative samples (32,768 in \autocite{radford_learning_2021}) in the batch for the model to learn useful information. \autocite{he_momentum_2020} Although there are models like Momentum Contrast  (MoCo) \autocite{he_momentum_2020} to build a large negative sample queue using a smaller batch size by momentum for pure image tasks, it is hard to use such strategy for multi-modality tasks involving both text and images without adding complexity to the model or training pipeline. 
+
+Image-text matching loss (being used in many multi modality models, such as \autocite{li_align_2021} \autocite{liao_evaluation_2023}\autocite{xu_attngan:_2017}), on the other hand, dose not treat this problem as a multi-class classification problem but a binary classification problem. That is, for each pair of image and text, the model need to determine if it is a matched pair. This method dose not require a large batch size and can be trained on a single GPU. The models we used involving a transformer decoder, unlike \autocite{li_align_2021} and \autocite{kim_vilt:_2021} which use the transformer encoder, we put the feature extraction token at the end of the sequence, like in Generative Pre-trained Transformer-1 (GPT-1) \autocite{alec_improving_nodate}. Specifically, when the model output the \verb|<end>| token, this will be appended to the \textit{generated sequence} same as other tokens, and when the model got this token as input, the output of the last layer of the transformer will not be projected to predict tokens but projected to do a binary classification for image-text matching. This process can be found in Figure \ref{fig:itm}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{itm.drawio.png}
+    \caption{Model With Image-Text Matching}
+    \label{fig:itm}
+\end{figure}
+Since the purpose of the ITM score is to find the best sequence in multiple model-generated sequences, it will be beneficial for use model's mistake as negative examples in ITM training. To achieve this, we maintain a dictionary with the values are queues of recent wrong model-generated output and keys are the correct answer. At the begining, the queue is initialized with random DeepSMILES strings in the training set and progressively being replaced by model output. By using this method, model can learn from its own mistakes. This task will also getting progressively more difficult because as the model trains, its output will get more simlar to the correct answer even when it is wrong. This process can be found in pseudocode .   
+
+\subsection{Experiment}
 
 Since we have a small dataset for fine-tuning, we applied many random online data augmentation during the training process: random rotation, random flipping, random cropping,  and random colour jitter (including RGB channels and brightness). 
 
