@@ -37,7 +37,7 @@
 \renewcommand*{\bibfont}{\footnotesize}
 
 \begin{document}
-\title{Converting Molecular Model Images to Digital Representations}
+\title{3D2Mol: Converting Molecular Model Images to Digital Representations to Improve Student Understanding}
 
 
 \author{Wenqi Marshall Guo\\
@@ -172,7 +172,7 @@ mistakes = {correct:random.choices(SMILES, k=3) for correct in SMILES}
 
 # training loop
 for img, text_in, text_out in dataloader():
-    # text_in is <start>SMILES<end> text_out is SMILES<end>
+    # text_in is <start>SMILES<end>, text_out is SMILES<end>
     optimizer.zero_grad()
     outputs = model(image, text_in, predict = True)[:,:-1,:]
     loss = focal_loss(outputs, text_out)
@@ -181,17 +181,10 @@ for img, text_in, text_out in dataloader():
     
     if outputs != text_out:
         mistakes[text_out].append(outputs)
-        mistakes[corr].pop(0)
-    text_in = []
-    label = []
-    for i in range(BATCH_SIZE):
-        corr = text_out[i]
-        if random.random()<0.5:
-            text_in.append(corr)
-            label.append(1)
-        else:
-            text_in.append(random.choice(mistakes[corr]))
-            label.append(0)
+        mistakes[text_out].pop(0)
+    
+    label = [random()<0.5 for _ in range(BATCH_SIZE)]
+    text_in = [text_out[i] if j else random.choice(mistakes[text_out[i]]) for i, j in enumerate(label)]
     optimizer.zero_grad()
     # predict = False for binary classification 
     outputs = model(image, text_in, predict = False)
@@ -201,7 +194,14 @@ for img, text_in, text_out in dataloader():
     optimizer.step()
 \end{lstlisting}
 \end{minipage}
-
+    % for i in range(BATCH_SIZE):
+    %     corr = text_out[i]
+    %     if random.random()<0.5:
+    %         text_in.append(corr)
+    %         label.append(1)
+    %     else:
+    %         text_in.append(random.choice(mistakes[corr]))
+    %         label.append(0)
 \subsection{Experiment}
 
 Since we have a small dataset for fine-tuning, we applied many random online data augmentation during the training process: random rotation, random flipping, random cropping,  and random colour jitter (including RGB channels and brightness). 
