@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[12pt]{article}
 \usepackage{listings}
 \usepackage{xcolor}
 
@@ -33,7 +33,7 @@
 \usepackage[style=ieee]{biblatex}
 \addbibresource{ref.bib}
 \usepackage[letterpaper]{geometry}
-% \usepackage[letterpaper, total={7in, 9in}]{geometry}
+% \usepackage[letterpaper, total={6in, in}]{geometry}
 \renewcommand*{\bibfont}{\footnotesize}
 
 \begin{document}
@@ -64,7 +64,7 @@ Molecular models
 \section{Introduction}
 Molecular models are helpful tools in chemistry education as they provide an intuitive way for students to understand the 3D structure compared to 2D molecular structure representation. These models can also assist students with 3D mental operations. 
 % Although virtual models could be as effective as concrete models, concrete should be available to students at least at the beginning of the study of new concepts and ideas, as humans sometimes rely on concrete objects.\autocite{savec_evaluating_2005} 
-A study \autocite{savec_evaluating_2005} found that virtual models could have the same effectiveness as concrete models, students should have access to concrete models at least at the beginning of the study because sometimes humans rely on concrete objects.  
+A study \autocite{savec_evaluating_2005} found that although virtual models could have the same effectiveness as concrete models, students should have access to concrete models at least at the beginning of the study because sometimes humans rely on concrete objects. Additionally, digital model tools have learning curve, and it is hard for students to understand some space operations such as a ``chair flip" using digital models. 
 However, digital model representation has the benefit that allowing students to look up more information about the molecule such as the IUPAC name and the boiling point. Students can also modify the molecule and observe how it will affect the molecular properties. Thus, it will be beneficial if students can convert concrete molecular models to digital representations. 
 
 Although there are models that can convert 2D molecular structure representations to corresponding digital representations \autocite{swinocsr}\autocite{decimer}\autocite{chempix}, to the best of our knowledge, there is not a model for 3D molecular models. It will be beneficial to chemical education to close this gap between 3D molecular models and digital representations. 
@@ -73,7 +73,7 @@ Our contribution to this paper can be summarised as:
 \item We have constructed two datasets: one computer-rendered 3D molecular model and another consisting of real-world 3D molecular models.
 \item We trained a model on top of these two datasets that is capable of converting images of concrete molecular models into their respective SMILES notations. 
 \item We applied a method based on multi-image input and beam search to increase the accuracy of the output.
-\item We proposed for the model to re-evoluet its own output to select more clbarated result, self negative
+\item  We proposed to let the model to re-evaluate its output and select the one with highest probability being correct.
 % can we use this for seg? review the segmented images
 % \item We applied a multi-image input method allowing users to capture multiple images of the molecular model to increase the accuracy of the output.
 \end{itemize}
@@ -102,7 +102,7 @@ Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks
 
 
 % \subsection{Re-evoluate the Results After Generation}
-
+\subsection{ChemPix}
 
 
 \section{Method}
@@ -116,7 +116,7 @@ In addition, DECIMER.ai also attempted to recognize hand-drawn structures by fin
     \label{fig:example}
 \end{figure}
 
-We downloaded a set of compounds from PubChem \autocite{kim_pubchem_2023}, and then these compounds were filtered based on heavy atoms and molecular weights and only contained elements of C, O, S, H, N, Cl, Br, F, and P. Because of the complex 3D nature of molecules, there could be occlusions between atoms and bonds, where important information is hidden in the image. Although there are methods to avoid `occlusions by some spatial algorithm or human selection, we decided to remove 3D spatial information in the pretraining stage. Thus, we downloaded the 2D coordinate from PubChem instead of 3D.  
+We downloaded a set of compounds from PubChem \autocite{kim_pubchem_2023}, and then these compounds were filtered based on heavy atoms and molecular weights and only contained elements of C, O, S, H, N, Cl, Br, F, and P. Because of the complex 3D nature of molecules, there could be occlusions between atoms and bonds, where important information is hidden in the image. Although there are methods to avoid occlusions by some spatial algorithm or human selection, we decided to remove 3D spatial information in the pretraining stage. Thus, we downloaded the 2D coordinate from PubChem instead of 3D.  
 % filtered such that the compounds have at most X atoms \footnote{We did not directly limit the number of atoms on PubChem queries: we limited the number of heavy atoms and molecular weight, which yielded in the limitation of atoms.} 
 After filtering, there are 79,369 compounds in the dataset. The pre-train training and validation sets are separated by image IDs. We created a Blender Python Script to render these compounds into 3D molecular images. OpenAI ChatGPT was used to write the building blocks (API Wrapper) and some logic of the script. The colour of each atom follows the CPK colouring convention and was according to a couple of online sources and 3D molecular models on the market. For each molecule, we rendered 4 different images at different angles. Detailed render process can be found in our GitHub repository. 
 % self negative example: gan
@@ -125,7 +125,7 @@ After filtering, there are 79,369 compounds in the dataset. The pre-train traini
 %redo
 We observed that image size will affect the convergence speed of the model and the traditional image size used for classification ($224\times224$) is not enough for our task; thus, we used an image size of $400\times400$. 
 \subsection{Real-World Dataset}
-We created a mobile application using React.js for data collection. To increase the efficiency of data collection, we group similar models using the GPT: a list of the names of the molecules is given to the GPT via the OpenAI API and asked to group similar molecules together. Users can build either the given molecules or another molecule they choose. Volunteers are recruited to collect these images of molecular models. Because some of the molecular model kits we used do not have sulfur, we excluded all molecules with sulfur. After collecting, we observed some low-quality data such as images with obstruction between atoms, motion blur, etc. Thus, we made another application allowing volunteers to go through all the images and decide if they will be kept or discarded.
+We created a mobile application using React.js for data collection. To increase the efficiency of data collection, we group similar models using the GPT: a list of the names of the molecules is given to the GPT via the OpenAI API and asked to group similar molecules together. Users can build either the given molecules or another molecule they choose. Volunteers are recruited to collect these images of molecular models. Because some of the molecular model kits we used do not have sulfur, we excluded all molecules with sulfur. After collecting, we observed some low-quality data such as images with obstruction between atoms, motion blur, etc. Thus, we made another application allowing volunteers to go through all the images and decide if they would be kept or discarded.
 
 We separated the training set and validation set by SMILES strings (i.e. different images of the same molecule will not appear in both validation and training set. Since we ignored isotopes here, molecules with different IDs might have the same SMILES) The validation set is randomly selected such that it has 20 molecules and 214 images total. 
 
@@ -146,24 +146,33 @@ Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the
 Beam search is a way to increase the accuracy of autoregressive models. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024}. Beam search can also provide users with multiple candidate answers to choose from, similar to the top-$n$ in image classification. However, one issue with beam search is that it will favour shorter sequences as a sub-sequence will always have a higher probability than its parent sequence. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024} There are multiple methods to solve this issue, some are mentioned in \autocite{yang_breaking_2018} and \autocite{zhang_beam_2024}. In this paper, we use a simple method mentioned in \autocite{zhang_beam_2024} where we multiple  $\frac{1}{L^\alpha}$ to the log probability where $L$ is the length of the sequence. This will make the log probability of a long sequence higher (since the log probability is negative). 
 % In this project, we set \(\alpha=0.75\) as suggested in \autocite{zhang_beam_2024}.
 
-Additionally, we also hypothesize that multiple image inputs will increase the accuracy of the model. This has been shown in previous research \autocite{sun_multi-input_2017}, in which the authors use ``early fusion" method where feature maps from 3 different images are concatenated on the channel axis in the early stage of the network. However, this method requires modification of the backbone network and the number of images in this method is fixed. Instead, our method passes individual images through the entire network (including the EfficientNet-V2-S and SwinOCSR decoder) and averages the softmax distribution of tokens.  
+Additionally, we also hypothesize that multiple image inputs will increase the accuracy of the model. This has been shown in previous research \autocite{sun_multi-input_2017}, in which the authors use the ``early fusion" method where feature maps from 3 different images are concatenated on the channel axis in the early stage of the network. However, this method requires modification of the backbone network and the number of images in this method is fixed. Instead, our method passes individual images through the entire network (including the EfficientNet-V2-S and SwinOCSR decoder) and averages the softmax distribution of tokens.  
 
 
 \subsection{Improve Accuracy By Self-Reflection}
 %should i put this in related works
-It has been shown that in Large Language Models (LLMs), it might be hard for the model to output useful and safe information, but it is easy for the model to find it after re-evaluating it. \autocite{bai_constitutional_2022} Similar ideas have been shown in some image-text generative models such as DALL-E \autocite{ramesh_zero-shot_2021} and CLIPasso \autocite{vinker_clipasso_2022} where another model (in these two cases, CLIP \autocite{radford_learning_2021}) to evaluate multiple output of the generative model and select the best output in the generated. There are also some image-text matching evolution metrics being proposed such as CLIPScore \autocite{hessel_clipscore:_2022} and image-text matching loss \autocite{xu_attngan:_2017} to evaluate the similarity between text and image. 
+It has been shown that in Large Language Models (LLMs), it might be hard for the model to output useful and safe information, but it is easy for the model to find it after re-evaluating it. \autocite{bai_constitutional_2022} Similar ideas have been shown in some image-text generative models such as DALL-E \autocite{ramesh_zero-shot_2021}
+% and 
+% CLIPasso \autocite{vinker_clipasso_2022} 
+where another model (in these two cases, CLIP \autocite{radford_learning_2021}) is to evaluate multiple outputs of the generative model and select the best output in the generated. There are also some image-text matching evolution metrics being proposed such as CLIPScore \autocite{hessel_clipscore:_2022} and image-text matching loss \autocite{xu_attngan:_2017} to evaluate the similarity between text and image. 
 
-However, CLIP is a contrastive learning model: for a given number of image-text pairs, feature of each image and text is extracted by its corresponding encoder, then in the embedding space, it is treated as a multi-class classification problem to match each image with corresponding text. \cite{radford_learning_2021} Thus, it usually requires a large number of negative samples (32,768 in \autocite{radford_learning_2021}) in the batch for the model to learn useful information. \autocite{he_momentum_2020} Although there are models like Momentum Contrast  (MoCo) \autocite{he_momentum_2020} to build a large negative sample queue using a smaller batch size by momentum for pure image tasks, it is hard to use such strategy for multi-modality tasks involving both text and images without adding complexity to the model or training pipeline. 
+However, CLIP is a contrastive learning model: for a given number of image-text pairs, the feature of each image and text is extracted by its corresponding encoder, and then in the embedding space, it is treated as a multi-class classification problem to match each image with corresponding text. \cite{radford_learning_2021} Thus, it usually requires a large number of negative samples (32,768 in \autocite{radford_learning_2021}) in the batch for the model to learn useful information. \autocite{he_momentum_2020} Although there are models like Momentum Contrast  (MoCo) \autocite{he_momentum_2020} to build a large negative sample queue using a smaller batch size by momentum for pure image tasks, it is hard to use such strategy for multi-modality tasks involving both text and images without adding complexity to the model or training pipeline. 
 
-Image-text matching loss (being used in many multi modality models, such as \autocite{li_align_2021} \autocite{liao_evaluation_2023}\autocite{xu_attngan:_2017}), on the other hand, dose not treat this problem as a multi-class classification problem but a binary classification problem. That is, for each pair of image and text, the model need to determine if it is a matched pair. This method dose not require a large batch size and can be trained on a single GPU. The models we used involving a transformer decoder, unlike \autocite{li_align_2021} and \autocite{kim_vilt:_2021} which use the transformer encoder, we put the feature extraction token at the end of the sequence, like in Generative Pre-trained Transformer-1 (GPT-1) \autocite{alec_improving_nodate}. Specifically, when the model output the \verb|<end>| token, this will be appended to the \textit{generated sequence} same as other tokens, and when the model got this token as input, the output of the last layer of the transformer will not be projected to predict tokens but projected to do a binary classification for image-text matching. This process can be found in Figure \ref{fig:itm}.
+Image-text matching loss (being used in many multi-modality models, such as \autocite{li_align_2021} \autocite{liao_evaluation_2023}\autocite{xu_attngan:_2017}), on the other hand, does not treat this problem as a multi-class classification problem but a binary classification problem. That is, for each pair of images and text, the model needs to determine if it is a matched pair. This method does not require a large batch size and can be trained on a single GPU. The models we used involving a transformer decoder, unlike \autocite{li_align_2021} and \autocite{kim_vilt:_2021} which use the transformer encoder, we put the feature extraction token at the end of the sequence, like in Generative Pre-trained Transformer-1 (GPT-1) \autocite{alec_improving_nodate}. Specifically, when the model outputs the \verb|<end>| token, this will be appended to the \textit{generated sequence} same as other tokens, and when the model gets this token as input, the output of the last layer of the transformer will not be projected to predict tokens but projected to do a binary classification for image-text matching. This process can be found in Figure \ref{fig:itm}.
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.5\linewidth]{itm.drawio.png}
+    \includegraphics[width=0.8\linewidth]{itm.drawio.png}
     \caption{Model With Image-Text Matching}
     \label{fig:itm}
 \end{figure}
-Since the purpose of the ITM score is to find the best sequence in multiple model-generated sequences, it will be beneficial for use model's mistake as negative examples in ITM training. To achieve this, we maintain a dictionary with the values are queues of recent wrong model-generated output and keys are the correct answer. At the begining, the queue is initialized with random DeepSMILES strings in the training (we did not exclude the correct answer because it will add computational overhead and the chance of selecting the correct answer in it is very low) set and progressively being replaced by model output. By using this method, model can learn from its own mistakes. This task will also getting progressively more difficult because as the model trains, its output will get more simlar to the correct answer even when it is wrong. This pseudocode can be found in Listing \ref{selfnagative}, detail such as translating between tokenized sequences and DeepSMILES, remvobing special tokens, reshaping, are not included.   
+Since the purpose of the ITM score is to find the best sequence in multiple model-generated sequences, it will be beneficial to use the model's mistakes as negative examples in ITM training. To achieve this, we maintain a dictionary with the values are queues of recent wrong model-generated output and keys are the correct answer. At the beginning, the queue is initialized with random DeepSMILES strings in the training (we did not exclude the correct answer because it will add computational overhead and the chance of selecting the correct answer in it is very low) set and progressively replaced by the model output. By using this method, the model can learn from its own mistakes. This task will also get progressively more difficult because as the model trains, its output will get more similar to the correct answer even when it is wrong. This process is shown in Figure \ref{selfnegative} and the pseudocode can be found in Listing \ref{selfnagative}, detail such as translating between tokenized sequences and DeepSMILES, removing special tokens, reshaping, are not included.   
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\linewidth]{selfnegative.drawio.png}
+    \caption{Mistakes Dictionary and Self-Negative}
+    \label{fig:selfnegative}
+\end{figure}
 
 \begin{minipage}{\linewidth}
 
@@ -210,8 +219,10 @@ We train our model on the synthetic dataset with AdamW \autocite{adamw} and an e
 % Similar to the pretraining, the decoder is frozen. 
 Additionally, we also freeze the projection layer between the encoder and reladecoder and the last 2 blocks of encoder EfficientNet-V2-S since the input of the decoder is in the same domain for pre-training and finetuning. This could also decrease the number of trainable parameters to avoid overfitting. 
 After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset.
-\section{Results and Discussions} 
-There are also a few hyperparameters in inference that we need to consider: the softmax temperature ($t$), beam size ($n$), $\alpha$ in the beam search penalty for short sequences, and number of input images ($N$). We used Weight and Bias \cite{wandb} to do a random sweep with on these hyperparameters and selected the hyperparameter set with the highest score, which is defined in Equation \ref{score} where $P_{1}$ and $P_{n}$ are top-1 and top-$beam$ accuracy. We extended our validation set with some more molecules, this dataset is also filtered to remove images with occlusion and bad lighting. However, we kept some images that could be out of the domain for the model (poor lighting but atoms are still visible, and overly simplified molecule: methane) to avoid biased results from cherry-picking the data. For each molecule, take $k$ samples where $k$ is the number of images for that molecule in the dataset. For each sample, we randomly select $N$ images from the dataset without replacement. 
+\section[Results and Discussions]{Results and Discussions\footnote{Although there are variation between each trainings, we only take one trained model in the evolution for simplicity. }}
+
+We extended our validation set with some more molecules, this dataset is also filtered to remove images with occlusion and bad lighting. However, we kept some images that could be out of the domain for the model (poor lighting but atoms are still visible, and overly simplified molecule: methane) to avoid biased results from cherry-picking the data. For each molecule, take $k$ samples where $k$ is the number of images for that molecule in the dataset. For each sample, we randomly select $N$ images from the dataset without replacement. 
+% There are also a few hyperparameters in inference that we need to consider: the softmax temperature ($t$), beam size ($n$), $\alpha$ in the beam search penalty for short sequences, and number of input images ($N$). We used Weight and Bias \cite{wandb} to do a random sweep with on these hyperparameters and selected the hyperparameter set with the highest score, which is defined in Equation \ref{score} where $P_{1}$ and $P_{n}$ are top-1 and top-$beam$ accuracy.
 
 
 \begin{equation}
@@ -235,14 +246,44 @@ Since the above validation set is manually filtered and is used to finetune hype
 compare the accuracy of different types of molecules
 % compare with hand written OCSR 
 % Since to the best of our knowledge, there is no pervious work targeting the same topic, we do not have any benchmark to compare to. However, the DECIMER.ai 
+
+\begin{table}[]
+    \centering
+    \begin{tabular}{c|cc}
+    nImages & Top-1 Accuracy & top-5 accuracy \\ \hline
+1 & 65.9 ± 6.4 & 83.5 ± 5.0 \\ 2 & 71.2 ± 5.8 & 85.8 ± 4.8 \\ 3 & 71.5 ± 5.8 & 87.3 ± 4.6 \\  
+    \end{tabular}
+    \caption{Caption}
+    \label{tab:my_label}
+\end{table}
+\subsection{Calibration}
+The model's calibration is the metric determining if the model's output accuracy is aligned with its uncertify.  The calibration metric of a model is important when it needs to make important decisions such as resume screaming and malware detection. \autocite{liang_holistic_2023} The calibration is important for our sequence generating task for another reason as we will select the output with the lowest uncertainty (highest \textit{logprob}) as the final output. We evaluated our model's calibration using the method similar to \cite{liang_holistic_2023}, we randomly sample $5\dot S$ samples where $S$ is the number of molecules in the validation set; in each sample, we random select 10 molecules and then randomly select images for that molecule. We calculate the mean accuracy for each sample and the mean perplexity ($logprob$) for each sample and plotted them in \ref{fig:cal1} for different $nImages$. 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{cal.png}
+    \caption{Calibration Plot of Model Without ITM}
+    \label{fig:cal1}
+\end{figure}
+
 \section{Conclusion}
 \section{Demo}
 We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}} with a frontend and open source our model on github\footnote{\url{https://github.com/weathon/3d2smile}}. 
 \section{Limation and Future Work}
-In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. 
-Our real-world dataset is limited by time and budget, a larger dataset could increase the accuracy and robustness of the model. 
-This project only focused on the technical side of the problem and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
-Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds when they are not \autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, might be able to provide better education values.
+\begin{itemize}
+    \item In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts in organic chemistry for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. In furture works, we will attempt to recongize the stereochemical information and output iso-SMILES instead of regular smiles. 
+
+\item  Our real-world dataset is limited by time and budget, a larger dataset could increase the accuracy and robustness of the model. 
+
+\item This project only focused on the technical side of the problem and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
+
+\item Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds when they are not \autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, and might be able to provide better education values. 
+
+\item  The mistakes dictionary is built using teaching-forcing model output, there is a domain gap between this and the model output in autoregressive mode. 
+
+\item There are also two other hyperparameters in the inference that we need to consider: the softmax temperature ($t$) and $\alpha$ in the beam search penalty for short sequences. We did not systematically investigate the effects of these hyperparameters. In future work, the models might yield different absolute and relative results.      
+% We used Weight and Bias \cite{wandb} to do a random sweep with on these hyperparameters and selected the hyperparameter set with the highest score, which is defined in Equation \ref{score} where $P_{1}$ and $P_{n}$ are top-1 and top-$beam$ accuracy.
+
+\end{itemize}
 \section*{Acknowledgement}
 The author wants to thank Dr. Brian Ganley from the Chemistry Department of the University of Missouri-Columbia and Wesley Zandberg from University of British Columbia for providing use cases and other advice on this project; Dr. Hung-yi Lee from National Taiwan University and Dr. Mu Li and Dr. Yi Zhu from Amazon (now in Boson.ai) for their illuminating lectures on YouTube played an essential role in the process of this project; Peizhi Yan, Dr. Shan Du, and Islam Osman from the UBC for mentoring in the process; and Beiliang Zhao from UBC for peer discussion.
 
@@ -254,6 +295,8 @@ The computation of this work is mainly performed on UBC Advanced Research Comput
 
 % \IEEEpeerreviewmaketitle
 \printbibliography
+\pagebreak 
+\section*{Appendix}
 \end{document}
 
 
