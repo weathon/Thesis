@@ -2,6 +2,7 @@
 \usepackage{listings}
 \usepackage[utf8]{inputenc}
 \usepackage{xcolor}
+\usepackage{gensymb}
 \usepackage{amsmath}
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -67,14 +68,14 @@ mohamed.sami.shehata@ubc.ca
 
 
 \begin{abstract}
-Molecular models 
+Concrete molecular models could be important tools for students to learn organic chemistry compared to the virtual models. However, it lacks some properties of virtual models such as being able to look up more information (e.g. boiling point, polarity, name, etc) about the molecule. Thus, we aim to close the gap between concrete models with their digital representations.   
 \end{abstract}
 
 
 \section{Introduction}
 Molecular models are helpful tools in chemistry education as they provide an intuitive way for students to understand the 3D structure compared to 2D molecular structure representation. These models can also assist students with 3D mental operations. 
 % Although virtual models could be as effective as concrete models, concrete should be available to students at least at the beginning of the study of new concepts and ideas, as humans sometimes rely on concrete objects.\autocite{savec_evaluating_2005} 
-A study \autocite{savec_evaluating_2005} found that although virtual models could have the same effectiveness as concrete models, students should have access to concrete models at least at the beginning of the study because sometimes humans rely on concrete objects. Additionally, digital model tools have learning curve, and it is hard for students to understand some space operations such as a ``chair flip" using digital models. 
+A study \autocite{savec_evaluating_2005} found that although virtual models could have the same effectiveness as concrete models, students should have access to concrete models at least at the beginning of the study because sometimes humans rely on concrete objects. Additionally, digital model tools have a learning curve, and it is hard for students to understand some space operations such as a ``chair flip" or bonds rotation using digital models. 
 However, digital model representation has the benefit that allowing students to look up more information about the molecule such as the IUPAC (International Union of Pure and Applied Chemistry) name, the boiling point, and the polarity. Students can also modify the molecule and observe how it will affect the molecular properties. Thus, it will be beneficial if students can convert concrete molecular models to digital representations. 
 
 
@@ -84,14 +85,14 @@ Our contribution to this paper can be summarised as:
 \item We have constructed two datasets: one computer-rendered 3D molecular model and another consisting of real-world 3D molecular models.
 \item We trained a model on top of these two datasets that is capable of converting images of concrete molecular models into their respective SMILES (simplified molecular-input line-entry system) notations. 
 \item We applied a method based on multi-image input and beam search to increase the accuracy of the output.
-\item  We proposed to let the model to re-evaluate its output and select the one with highest probability being correct.
+\item  We proposed to let the model re-evaluate its output and select the one with the highest probability of being correct.
 % can we use this for seg? review the segmented images
 % \item We applied a multi-image input method allowing users to capture multiple images of the molecular model to increase the accuracy of the output.
 \end{itemize}
 
 \section{Related Work}
 To the best of our knowledge, there is no prior model that can convert a 3D molecular set photo into its digital structure representation. However, there are some models for 2D structure formulas. The two most recent ones are SwinOCSR\autocite{swinocsr} and DECIMER.ai\footnote{The name DECIMER has been used by the same team for both the dataset and two versions of the mode, here we are refreshing the model published in 2023.}\autocite{decimer}. These two models are very similar in architecture consisting of an image encoder and a transformer. The architecture of DECIMER.ai and SwinOCSR are shown in Figure \ref{fig:rwa}.
-ChemPix is another model that attempted to recognize hand-drawn hydrocarbon sturtures using CNN and Long Short-Term Memory (LSTM).  
+ChemPix is another model that attempted to recognize hand-drawn hydrocarbon structures using CNN and Long Short-Term Memory (LSTM).  
 
 \begin{figure}
     \centering
@@ -107,17 +108,17 @@ The decoder in DECIMER.ai is a transformer model based on \autocite{attention_is
 
 Although DeepSMILES \autocite{oboyle_deepsmiles:_2018} has been proposed for machine learning models to generate more valid identifies, their previous work \autocite{rajan_performance_2022} has shown that SMILES actually lead to the most accurate identifiers, SELFIES \autocite{krenn_self-referencing_2020} generated the most valid sequences, and SMILES is between the two. Thus, they used SMILES instead of DeepSMILES in DECIMER.ai. \autocite{decimer}  
 
-DECIMER.ai is trained on 127.5 millions molecules (453.9 millions depictions) with image size of 512$\times$512. They tested the model on4 in-domain dataset with 250K images each. The testing set dose not contain molecules from the training set. The results shows DECIMER.ai can generate moleucules with Tanimoto similarity greater than 0.95 and average sequence-level accuracy greater than 75\%. The detialed perfomance result could be find in their original paper \autocite{decimer}. 
+DECIMER.ai is trained on 127.5 million molecules (453.9 million depictions) with image size of 512$\times$512. They tested the model on the in-domain dataset with 250K images each. The testing set does not contain molecules from the training set. The results show DECIMER.ai can generate molecules with Tanimoto similarity greater than 0.95 and average sequence-level accuracy greater than 75\%. The detailed performance result could be found in their original paper \autocite{decimer}. 
 
-In addition to printed structure formulas, which has regular shapes and format, DECIMER.ai also attempted to recognize hand-drawn structures by finetuning the model with a dataset that has augmented data that makes structures look hand-drawn. This increases sequence level accuracy from 27\% to 60\% and increased the Tanimoto similarity from 0.2 to 0.89.
+In addition to printed structure formulas, which have regular shapes and format, DECIMER.ai also attempted to recognize hand-drawn structures by finetuning the model with a dataset that has augmented data that makes structures look hand-drawn. This increases sequence level accuracy from 27\% to 60\% and increases the Tanimoto similarity from 0.2 to 0.89.
 \autocite{decimer} 
 
 %how it trained on real data and handwritten 
 \subsection{SwinOCSR}
-In SwinOCSR, the encoder (they referred to as "backbone" in their paper) is built on the Swin Transformer. The image is cut into patches with each path having a size of $4 \times 4$ pixels. Then each patch is flattened into and treated as a token which is a 48-dim vector. Then a linear projection layer is applied and each token is into a 192-dim space. 
+In SwinOCSR, the encoder (they referred to as ``backbone" in their paper) is built on the Swin Transformer. The image is cut into patches with each path having a size of $4 \times 4$ pixels. Then each patch is flattened into and treated as a token which is a 48-dim vector. Then a linear projection layer is applied and each token is into a 192-dim space. 
 Then 4 Swin-Transformer (Shifted Window Transformer) \autocite{swin_tran} blocks are used. Each swim transformer block contains two regular transformer modules. In the first transformer module, Window Mutli-head Self Attention (W-MSA) is performed within each window, which is a group of neighbouring tokens. In the second transformer module, the Shifted Window Mutli-head Self Attention (SW-MSA) is performed on a shift-ed window. The W-MSA allows the model to capture the local relationship in the image, and the SW-MSA introduced a cross-window connection while maintaining efficiency. Before the tensor ($H_i \times W_i \times C_i$) gets passed to the next Swin Transformer block, a patch merging operation is performed to capture hierarchical information. During path merging, neighbouring $2 \times 2$ patches are merged and the tokens are concatenated. This results in $\frac{1}{4}$ of the number of patches and each $4C_i$ feature for each token. Then the dimensions of each token are reduced to $2C_i$. In SwinOCSR, 4 Swin Transformer blocks are used; the last Swin Transformer block outputs a tensor with shape $\frac{H}{32} \times \frac{H}{32} \times 1536$. This tensor is flattened across the spatial axes and projects the last axis into 256 dimensions. 
 % After each block, a patch merging operation is performed such that neighbouring patches are merged and the tokens are contacted. \autocite{swin_tran} The decoder of SwinOCSR is very similar to the decoder in DECIMER.ai, which is also a transformer encoder-decoder pair but with 6 blocks of encoders and 6 blocks of decoders. 
-In additition, SwinOCSR uses focal loss \autocite{lin_focal_2018} instead of normal cross entropy loss due to the inbalance of the tokens distribution. \cite{swinocsr} Original focal loss is only for binary task and \autocite{swinocsr} rewrited it for muti-class, which is shown in Equation \ref{focal} and \ref{focal2}, where $\sigma$ is the sigmoid function, $O_i$ is the output logist from the network, and $p_i$ is the probility of each class. 
+In addition, SwinOCSR uses focal loss \autocite{lin_focal_2018} instead of normal cross-entropy loss due to the imbalance of the tokens distribution. \cite{swinocsr} Original focal loss is only for binary task and \autocite{swinocsr} rewrited it for muti-class, which is shown in Equation \ref{focal} and \ref{focal2}, where $\sigma$ is the sigmoid function, $O_i$ is the output logist from the network, and $p_i$ is the probility of each class. 
 \begin{equation}
     p_i = \begin{cases} \sigma(o_i) &  y_i=1 \\
     1-\sigma(o_i) & \text{otherwise} \\
@@ -138,13 +139,30 @@ In additition, SwinOCSR uses focal loss \autocite{lin_focal_2018} instead of nor
 
 % \subsection{Re-evoluate the Results After Generation}
 \subsection{ChemPix}
-ChemPix \cite{chempix} is a model aimed to recongize hand-drawn hydrocarbon (molecules with only carbon and hydrogen atoms, showing in sturture formulas as mostly lines without letter notations) sturtures to their SMILES strings. They use a network architecture adapted from image captioning, with a CNN as encoder and a LSTM with attention meginism and beam search as decoder. \cite{chempix} They limited their dataset with ring size less than 8 carbons and molecules with multiple conjoined rings are not considered. They use both synthetic and real hand-drawn images to train the model. They also used a ``voting commitee" consitant muitiple models to vote for the final answer.
+ChemPix \cite{chempix} is a model aimed at recognizing hand-drawn hydrocarbon (molecules with only carbon and hydrogen atoms, showing in structure formulas as mostly lines without letter notations) structures to their SMILES strings. They use a network architecture adapted from image captioning, with a CNN as the encoder and an LSTM with an attention mechanism and beam search as the decoder. \cite{chempix} They limited their dataset with ring size less than 8 carbons and molecules with multiple conjoined rings are not considered. They use both synthetic and real hand-drawn images to train the model. They also used a ``voting committee" consisting of multiple models to vote for the final answer.
 
 % \subsection{Math Formula to LaTeX Conversion}
 % Besides OCSR, another simlar 
 
+\subsection{Perfomance Comparsion}
+In DECIMER.ai \autocite{decimer}, they compared the performance between DECIMER.ai and other OCSR software, including SwinOCSR. They tested the sequence-level accuracy and Tanimoto similarity on a series of datasets. To test the robustness of the models, they added distortions (i.e. rotating for $\pm5\degree$ and shearing) to all datasets. The comparison of DECIMER.ai and SwinOCSR is shown in table \ref{compare}. \autocite{decimer} For detailed information, such as the data distribution and for performances of other models, please refer to the DECIMER.ai paper \autocite{decimer}. They concluded that DECIMER.ai achieves competitive results and its performance did not get negatively affected by distortion in the data. SwinOCSR did not achieve outstanding results in this benchmark; the developer of SwinOCSR observed that their model dose does not perform well on real-world data, possibly due to a lack of diversity in the training data. \autocite{decimer} \autocite{swinocsr} 
+
+\begin{table}[]
+    \centering
+    \begin{tabular}{c|c|c|c|c|}
+      &  \multicolumn{2}{c|}{Undistorted Dataset} & \multicolumn{2}{c|}{Distorted Dataset} \\ \hline
+      & DECIMER.ai & SwinOCSR & DECIMER.ai & SwinOCSR \\ \hline
+     Sequence-Level Accuracy & \textbf{65\%} & 14\% & \textbf{68 \%}  & 8\%\\
+     Tanimoto & \textbf{93\%} & 70\% & \textbf{96 \%} & 64\%\\
+     Proportion of Tanimoto=0 & \textbf{2\%} & 5\% & \textbf{1\%} & 8\%\\
+     Proportion of Tanimoto<0.3 & \textbf{3\%} & 9\% & \textbf{2\%} &16\%\\
+
+    \end{tabular}
+    \caption{Perfomance Comparison Between DECIMER.ai and SwinOCSR}
+    \label{compare}
+\end{table}
 \section{Method}
-We also used a twi-stage training process in our project, similar to \autocite{decimer} and \autocite{chempix}. The model is first trained on a synthetic (3D rendered) dataset and then finetuned on a real-world collected dataset to reduce the amount of real-world data that needs to be collected as they are expensive.  
+We also used a two-stage training process in our project, similar to \autocite{decimer} and \autocite{chempix}. The model is first trained on a synthetic (3D rendered) dataset and then finetuned on a real-world collected dataset to reduce the amount of real-world data that needs to be collected as they are expensive.  
 
 
 \begin{figure}
@@ -188,11 +206,18 @@ P & \textcolor{color8}{\textbf{*}} & (0.502, 0, 0.502, 1)\\
 %redo
 We observed that image size will affect the convergence speed of the model and the traditional image size used for classification ($224\times224$) is not enough for our task; thus, we used an image size of $400\times400$. 
 \subsection{Real-World Dataset}
-We created a mobile application using React.js for data collection. The application will show user an 3D interactive model pre-view by \autocite{rego_3dmoljs_2015} and allow user to capture mutiple images of the model they built. The application screenshot could be found in Appendix. To increase the efficiency of data collection, we group similar models using the GPT: a list of the names of the molecules is given to the GPT via the OpenAI API and asked to group similar molecules together. Users can build either the given molecules or another molecule they choose. Volunteers are recruited to collect these images of molecular models. Because some of the molecular model kits we used do not have sulfur, we excluded all molecules with sulfur. After collecting, we observed some low-quality data such as images with obstruction between atoms, motion blur, etc. Thus, we made another application allowing volunteers to go through all the images and decide if they would be kept or discarded. The images are collected on clear backgrounds, and for each molecule images with different camera angles are captured. In total, we have a total of 1934 images of 203 molecules. 
+We created a mobile application using React.js for data collection. The application will show the user a 3D interactive model pre-view by \autocite{rego_3dmoljs_2015} and allow the user to capture multiple images of the model they built. The application screenshot can be found in the Appendix. To increase the efficiency of data collection, we group similar models using the GPT: a list of the names of the molecules is given to the GPT via the OpenAI API and asked to group similar molecules together. Users can build either the given molecules or another molecule they choose. Volunteers are recruited to collect these images of molecular models. Because some of the molecular model kits we used do not have sulphur, we excluded all molecules with sulphur. After collecting, we observed some low-quality data such as images with obstruction between atoms, motion blur, etc. Thus, we made another application allowing volunteers to go through all the images and decide if they would be kept or discarded. The images are collected on clear backgrounds, and for each molecule images with different camera angles are captured. In total, we have a total of 1934 images of 203 molecules. 
 
 We separated the training set and validation set by SMILES strings (i.e. different images of the same molecule will not appear in both validation and training set. Since we ignored isotopes here, molecules with different IDs might have the same SMILES) The validation set is randomly selected such that it has 20 molecules and 214 images total. 
 
-Figure \ref{fig:example} shows an example of rendered and real images. These images are images from the dataset after super-resolution for better visualization. Figure \ref{fig:dis} shows the DeepSILES string length distribution of both dataset. 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.4\linewidth]{freq1.png}
+    \includegraphics[width=0.4\linewidth]{freq2.png}
+    \caption{Character Frequency Distribution}
+    \label{chardis}
+\end{figure}
+Figure \ref{fig:example} shows an example of rendered and real images. These images are images from the dataset after super-resolution for better visualization. Figure \ref{fig:dis} shows the DeepSILES string length distribution and Figure \ref{chardis} shows the character frequency distribution of both datasets. 
 
 \subsection{Machine Learning Model} 
 \subsubsection{Basic Model}
@@ -203,20 +228,25 @@ Figure \ref{fig:example} shows an example of rendered and real images. These ima
     \label{fig:arch}
 \end{figure}
 
-Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the ones used in DECIMER.ai \autocite{decimer} and SwinOCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with internal parameters that are trained on ImageNet-1k \autocite{imagenet}. The reason behind selecting EfficientNet-V2-S instead of SwinTransformer like in SwinOCSR \autocite{swinocsr} is that on TorchVision the EfficientNet family actually has higher accuracy, and the reason of selecting the S (small) version of the EfficientNet-V2 is due to the very limited data in fine-tuning real-world dataset. Since we have very limited data, it will be benfitical to chose a smaller model to avoid over fitting. 
+Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the ones used in DECIMER.ai \autocite{decimer} and SwinOCSR \autocite{swinocsr}. The encoder we used is the EfficientNet-V2-S \autocite{effv2} from torchvision \autocite{torchvision2016} with internal parameters that are trained on ImageNet-1k \autocite{imagenet}. The reason behind selecting EfficientNet-V2-S instead of SwinTransformer like in SwinOCSR \autocite{swinocsr} is that on TorchVision the EfficientNet family actually has higher accuracy, and the reason for selecting the S (small) version of the EfficientNet-V2 is due to the very limited data in the fine-tuning real-world dataset: it will be beneficial to choose a smaller model to avoid overfitting. 
 
 We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$ ($Channel \times Width \times Height$)  for each batch. This feature map is then flattened into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$ ($Sequence \times Channel$), projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then fed into our decoder. which is adapted from SwinOCSR \autocite{swinocsr}. We also used focal loss in our model; however, instead of sigmoid, we used Softmax as implemented in \cite{torch_focal}.
 
+During training, we use the ``teacher forcing" method: the model will be given all the correct tokens and for each token ($t$-th) the model will predict the next token $(t+1)$-th on the same position on the output. Since the decoder in Transformer is masked self-self-attention, the token at $t$ will only have an attention score with previous tokens ($0\dots t-1$). This utilizes the parralization feature of the Transformer. However, this makes the model only see the correct previous tokens and not the wrong previous tokens (which would be common during inferences), making it possible for the model to cumulate the mistakes during inferences. \autocite{bengio_scheduled_2015} Thus, scheduled sampling \autocite{bengio_scheduled_2015} proposed to sometimes use the model's own output as the \textit{previous tokens} during training. However, this will disrupt the parreall features of transformers. Additionally, unlike natural language, which has some variation and fault tolerance, the DeepSMILES we are generating has only one correct answer. Thus, it does not matter if the error is cumulative as the DeepSMILES would be wrong either way. Therefore, we are not using the scheduled sampling in this project. 
+
 \subsection{Beam search and Multi-image input}
-Beam search is a way to increase the accuracy of autoregressive models. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024}. Beam search can also provide users with multiple candidate answers to choose from, similar to the top-$n$ in image classification. However, one issue with beam search is that it will favour shorter sequences as a sub-sequence will always have a higher probability than its parent sequence. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024} There are multiple methods to solve this issue, some are mentioned in \autocite{yang_breaking_2018} and \autocite{zhang_beam_2024}. In this paper, we use a simple method mentioned in \autocite{zhang_beam_2024} where we multiple $\frac{1}{L^\alpha}$ to the log probability where $L$ is the length of the sequence. This will make the log probability of a long sequence higher (since the log probability is negative). The re-scored $logprob$ is shown in Equation \ref{beam}.\cite{zhang_beam_2024} where $P(y_t|y_1\dots y_{t-1}, \textbf{e})$ is the probility of output $y_t$ at $t$-th token given pervious tokens $y_1\dots y_{t-1}$ and image embeding $\textbf{e}$. 
+Beam search is a way to increase the accuracy of autoregressive models. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024}. Beam search can also provide users with multiple candidate answers to choose from, similar to the top-$n$ in image classification. However, one issue with beam search is that it will favour shorter sequences as a sub-sequence will always have a higher probability than its parent sequence. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024} There are multiple methods to solve this issue, some are mentioned in \autocite{yang_breaking_2018} and \autocite{zhang_beam_2024}. In this paper, we use a simple method mentioned in \autocite{zhang_beam_2024} where we multiple $\frac{1}{L^\alpha}$ to the log probability where $L$ is the length of the sequence. This will make the log probability of a long sequence higher (since the log probability is negative). It can also be seen as taking the mean of the $logprob$ of each token when $\alpha=1$. The re-scored $logprob$ is shown in Equation \ref{beam}.\cite{zhang_beam_2024} where $P(y_t|y_1\dots y_{t-1}, \textbf{e})$ is the probility of output $y_t$ at $t$-th token given pervious tokens $y_1\dots y_{t-1}$ and image embeding $\textbf{e}$. 
 \begin{equation}
     LP = \frac{1}{L^{\alpha}}\sum_{t=1}^{L}logP(y_t|y_1\dots y_{t-1}, \textbf{e})
     \label{beam}
 \end{equation}
 % In this project, we set \(\alpha=0.75\) as suggested in \autocite{zhang_beam_2024}. 
 
-Additionally, we also hypothesize that multiple image inputs will increase the accuracy of the model. This has been shown in previous research \autocite{sun_multi-input_2017}, in which the authors use the ``early fusion" method where feature maps from 3 different images are concatenated on the channel axis in the early stage of the network. However, this method requires modification of the backbone network and the number of images in this method is fixed. Instead, our method passes individual images through the entire network (including the EfficientNet-V2-S and SwinOCSR decoder) and averages the softmax distribution of tokens. The comparsion of our models and \autocite{sun_multi-input_2017} is shown in Figrue \ref{mi}.
-
+Additionally, we also hypothesize that multiple image inputs will increase the accuracy of the model. This has been shown in previous research \autocite{sun_multi-input_2017}, in which the authors use the ``early fusion" method where feature maps from 3 different images are concatenated on the channel axis in the early stage of the network. However, this method requires modification of the backbone network and the number of images in this method is fixed. Instead, our method passes individual images through the entire network (including the EfficientNet-V2-S and SwinOCSR decoder) and averages the softmax distribution of tokens, as shown in Equation \ref{eq:mi} where $I$ is the input image set, $M$ is the model, $P(y_{t,j})$ is the probability of token $j$  at time $t$, and $\sigma$ is the Softmax function. The comparison of our models and \autocite{sun_multi-input_2017} is shown in Figure \ref{mi}. 
+\begin{equation}
+    P(y_{t,i})=\frac{1}{|I|}\sum_{i\in I}P(y_{t,i}|y_0 \dots y_{t-1}, i) = \frac{1}{|I|}\sum_{i\in I}\sigma(M(y_0 \dots y_{t-1}, i))
+    \label{eqmi}
+\end{equation}
 \begin{figure}
     \centering
     \includegraphics[width=0.8\textwidth]{mi.drawio.png}
@@ -249,10 +279,10 @@ Since the purpose of the ITM score is to find the best sequence in multiple mode
     \caption{Mistakes Dictionary and Self-Negative}
     \label{fig:selfnegative}
 \end{figure}
-
 \begin{minipage}{\linewidth}
+\tiny
 
-\begin{lstlisting}[language=Python, caption=Training Process Pseudocode, label=selfnagative]
+    \begin{lstlisting}[language=Python, caption=Training Process Pseudocode, label=selfnagative]
 mistakes = {correct:random.choices(SMILES, k=3) for correct in SMILES}
 
 # training loop
@@ -261,10 +291,11 @@ for img, text_in, text_out in dataloader():
     outputs = model(image, text_in, predict = True)[:,:-1,:]
     loss = focal_loss(outputs, text_out)
     model.gradient_descent.step()
-    
-    if outputs != text_out:
-        mistakes[text_out].append(outputs)
-        mistakes[text_out].pop(0)
+
+    for i in range(BATCH_SIZE):
+        if outputs != text_out:
+            mistakes[text_out[i]].append(outputs[i])
+            mistakes[text_out[i]].pop(0)
     
     label = [random()<0.5 for _ in range(BATCH_SIZE)]
     text_in = [text_out[i] if j else random.choice(mistakes[text_out[i]]) for i, j in enumerate(label)]
@@ -292,11 +323,11 @@ We train our model on the synthetic dataset with AdamW \autocite{adamw} and an e
 % Similar to the pretraining, the decoder is frozen. 
 % Additionally, we also freeze the projection layer between the encoder and reladecoder and the last 2 blocks of encoder EfficientNet-V2-S since the input of the decoder is in the same domain for pre-training and finetuning. This could also decrease the number of trainable parameters to avoid overfitting. 
 After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset.
-\section[Results and Discussions]{Results and Discussions\footnote{Although there are variations between each training, we only take one trained model in the evolution for simplicity. And different part of the result might use different trained models. }}
+\section[Results and Discussions]{Results and Discussions\footnote{Although there are variations between each training, we only take one trained model in the evolution for simplicity. And different parts of the result might use different trained models. }}
 \subsection{Accuracy}
 We extended our validation set with some more molecules, this dataset is also filtered to remove images with occlusion and bad lighting. However, we kept some images that could be out of the domain for the model (poor lighting but atoms are still visible, and overly simplified molecule: methane) to avoid biased results from cherry-picking the data. For each molecule, take $k$ samples where $k$ is the number of images for that molecule in the dataset. For each sample, we randomly select $N$ images from the dataset without replacement. 
 
-Similar to \cite{swinocsr}, we evoluated the relationship beyween our model's perfomance with types of molecules and smiles string length. However, since our validation dataset is extreamly limited, this could not be used as definated answer. 
+Similar to \cite{swinocsr}, we evaluated the relationship between our model's performance with types of molecules and smiles string length. However, since our validation dataset is extremely limited, this could not be used as defined answer. 
 
 
 
@@ -332,7 +363,7 @@ compare the accuracy of different types of molecules
 %     \label{tab:my_label}
 % \end{table}
 \subsection{Calibration}
-The model's calibration is the metric determining if the model's output accuracy is aligned with its uncertify.  The calibration metric of a model is important when it needs to make important decisions such as resume screaming and malware detection. \autocite{liang_holistic_2023} The calibration is important for our sequence generating task for another reason as we will select the output with the lowest uncertainty (highest \textit{logprob}) as the final output. We evaluated our model's calibration using the method similar to \cite{liang_holistic_2023}, we randomly sample  in each sample, we random select 10 molecules and then randomly select images for that molecule. We calculate the mean accuracy for each sample and the mean perplexity ($logprob$) for each sample and plotted them in Figure \ref{fig:cal1} for different $nImages$. Because the sequence probility (also known as perplexity) is the product of the probilities of each tokens, the value is usually small, usually with a range smaller than 0-1. Thus, did not use the commonly used metric expected calibration error (ECE) like in \cite{liang_holistic_2023}. In fact, even in \autocite{liang_holistic_2023}, they did not evoluate the calibration for generative tasks. Instead, we used the $r^2$ value to evoluate the calbration of the model. This is partically inspried by the $r^2$ values used in evoluating the quility of calibration curve in analytical chemistry (such as absorbtion or GC-MS). 
+The model's calibration is the metric determining if the model's output accuracy is aligned with its uncertify.  The calibration metric of a model is important when it needs to make important decisions such as resume screaming and malware detection. \autocite{liang_holistic_2023} The calibration is important for our sequence generating task for another reason as we will select the output with the lowest uncertainty (highest \textit{logprob}) as the final output. We evaluated our model's calibration using a method similar to \cite{liang_holistic_2023}, we randomly sample in each sample, we randomly select 10 molecules and then randomly select images for each molecule. We calculate the mean accuracy for each sample and the mean perplexity ($logprob$) for each sample and plot them in Figure \ref{fig:cal1} for different $nImages$. Because the sequence probability (perplexity) is the product of the probabilities of each token, the value is usually small, with a range smaller than 0-1. Thus, did not use the commonly used metric expected calibration error (ECE) like in \cite{liang_holistic_2023}. In fact, even in \autocite{liang_holistic_2023}, they did not evaluate the calibration for generative tasks. Instead, we used the $r^2$ value to evaluate the calibration of the model. This is partially inspired by the $r^2$ values used in evaluating the quality of the calibration curve in analytical chemistry (such as absorption or GC-MS). 
 \begin{figure}
     \centering
     \includegraphics[width=0.3\textwidth]{caln1.png}
@@ -343,32 +374,32 @@ The model's calibration is the metric determining if the model's output accuracy
 \end{figure}
 \begin{figure}
     \centering
-    \includegraphics[width=1\linewidth]{image.png}
+    \includegraphics[width=0.8\linewidth]{image.png}
     \caption{Accuracy For Each Molecule}
     \label{fig:acc_each}
 \end{figure}
 \section{Conclusion}
 \section{Demo}
-We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}} with a frontend and open source our model on github\footnote{\url{https://github.com/weathon/3d2smile}}. 
+We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}} with a frontend and open source our model on github\footnote{\url{https://github.com/weathon/3d2smile}}. A simple demo video can be found on youTube \footnote{\url{https://youtu.be/m4AkzqKC-M4}}. 
 \section{Limation and Future Work}
 \begin{itemize}
 \item In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts in organic chemistry for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. However, this is challenging because  
-In furture works, we will attempt to recongize the stereochemical information and output iso-SMILES instead of regular smiles. 
+In future works, we will attempt to recognize the stereochemical information and output iso-SMILES instead of regular smiles. 
 
-\item  Our real-world dataset is limited by time and budget, a larger dataset could increase the accuracy and robustness of the model. 
+\item Both of our dataset is limited by time and budget. COMPARE a larger dataset could increase the accuracy and robustness of the model. 
 
 \item This project only focused on the technical side of the problem and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
 
 \item Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds when they are not \autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, and might be able to provide better education values. 
 
-\item  The mistakes dictionary is built using teaching-forcing model output, there is a domain gap between this and the model output in autoregressive mode. 
+\item  The purpose of the mistakes dictionary is to simulate the real mistakes that the model will encounter during inferences. However, during the training, the model generates the sequence by the teaching forcing method (where it always gets the correct pervious tokens ($y_1 \dots y_{t-1}$) while during inferences the pervious tokens are generated by the model itself. This will lead to a domain gap between the training mistakes and the inferences mistakes, making it possible that models cannot find the wrong output sequence during inferences. In future work, it is worth investigating if using the model's real output for mistakes dictionary (similar to the idea in Scheduled Sampling \autocite{bengio_scheduled_2015}) will be beneficial. 
 
 % \item There are also two other hyperparameters in the inference that we need to consider: the softmax temperature ($t$) and $\alpha$ in the beam search penalty for short sequences. We did not systematically investigate the effects of these hyperparameters. In future work, the models might yield different absolute and relative results.      
 % We used Weight and Bias \cite{wandb} to do a random sweep with on these hyperparameters and selected the hyperparameter set with the highest score, which is defined in Equation \ref{score} where $P_{1}$ and $P_{n}$ are top-1 and top-$beam$ accuracy.
 
 \end{itemize}
-\section*{Acknowledgement}
-The author wants to thank \textbf{Dr. Brian Ganley} from the Chemistry Department of the University of Missouri-Columbia and \textbf{Dr. Wesley Zandberg} from University of British Columbia for providing use cases and other advice on this project; \textbf{Dr. Hung-yi Lee} from National Taiwan University and \textbf{Dr. Mu Li} and \textbf{Dr. Yi Zhu} from Amazon (now in Boson.ai) for their illuminating lectures on YouTube played an essential role in the process of this project; \textbf{Peizhi Yan}, \textbf{Dr. Shan Du}, and \textbf{Islam Osman} from the UBC for mentoring in the process; \textbf{Yiyang Du} form UBC for data collecting; and \textbf{Beiliang Zhao} from UBC for peer discussion.
+\section*{Acknowledgement} 
+The author wants to thank  \textbf{Dr. Mohamed Shehata} for supervising and providing computing resources for this project; \textbf{Dr. Brian Ganley} from the Chemistry Department of the University of Missouri-Columbia and \textbf{Dr. Wesley Zandberg} from the University of British Columbia for providing use cases and other advice on this project; \textbf{Dr. Hung-yi Lee} from National Taiwan University and \textbf{Dr. Mu Li} and \textbf{Dr. Yi Zhu} from Amazon (now in Boson.ai) for their illuminating lectures on YouTube played an essential role in the process of this project; \textbf{Peizhi Yan}, \textbf{Dr. Shan Du}, and \textbf{Islam Osman} from the UBC for mentoring in the process; \textbf{Yiyang Du} from UBC for data collecting; and \textbf{Beiliang Zhao} from UBC for peer discussion.
 
 % I would also want to thank my cat, Yiyang Du, for providing emotional support during this project. 
 
@@ -376,13 +407,13 @@ The creation of this project was aided by OpenAI ChatGPT and Google Gemini, whic
 
 The computation of this work is partially performed on UBC Advanced Research Computing, DOI: 10.154288/SOCKEYE.
 \section*{Conflict of Interest}
-The author Wenqi Marshall Guo is the owner of WeaSoft software development group, and this project might be deployed for use and profit of the WeaSoft group. 
+The author Wenqi Marshall Guo is the owner of the WeaSoft software development group, and this project might be deployed for the use and profit of the WeaSoft group. 
 % \IEEEpeerreviewmaketitle
 \printbibliography
 \pagebreak 
 \section*{Appendix}
 \subsection*{0\% Accuracy Image Samples}
-Here are image samples from the real-world dataset where the model achrivees 0\% accuracy on individual molecules. \\
+Here are image samples from the real-world dataset where the model achieves 0\% accuracy on individual molecules. \\
 \begin{center}
     \begin{tabular}{c|c|c}
         Name & Sample Images   & SMILES  \\ \hline
