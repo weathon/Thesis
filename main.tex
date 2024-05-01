@@ -68,7 +68,7 @@ mohamed.sami.shehata@ubc.ca
 
 
 \begin{abstract}
-Concrete molecular models could be important tools for students to learn organic chemistry compared to the virtual models. However, it lacks some properties of virtual models such as being able to look up more information (e.g. boiling point, polarity, name, etc) about the molecule. Thus, we aim to close the gap between concrete models with their digital representations. In this paper, we built a computer rendered and a real-world dataset of molecular models.We than trained a deep learning model on the datasets that can convert an image of real-world molecular models into simplified molecular-input line-entry system (SMILES). We tested beam search, multi-image input, and self-reflection to increase the accuracy of the model. 
+Concrete molecular models could be important tools for students to learn organic chemistry compared to the virtual models. However, it lacks some properties of virtual models such as being able to look up more information (e.g. boiling point, polarity, name, etc) about the molecule. Thus, we aim to close the gap between concrete models with their digital representations. In this paper, we built a computer-rendered and real-world dataset of molecular models. We then trained a deep learning model on the datasets that can convert an image of real-world molecular models into a variance of the simplified molecular-input line-entry system (SMILES), DeepSMILES. Additionally, We tested if beam search, multi-image input, and self-reflection could increase the accuracy of the model. We also examined how the model's accuracy individually and the model's calibration. 
 
 \end{abstract}
 
@@ -76,7 +76,7 @@ Concrete molecular models could be important tools for students to learn organic
 \section{Introduction}
 Molecular models are helpful tools in chemistry education as they provide an intuitive way for students to understand the 3D structure compared to 2D molecular structure representation. These models can also assist students with 3D mental operations. 
 % Although virtual models could be as effective as concrete models, concrete should be available to students at least at the beginning of the study of new concepts and ideas, as humans sometimes rely on concrete objects.\autocite{savec_evaluating_2005} 
-A study \autocite{savec_evaluating_2005} found that although virtual models could have the same effectiveness as concrete models, students should have access to concrete models at least at the beginning of the study because sometimes humans rely on concrete objects. Additionally, digital model tools have a learning curve, and it is hard for students to understand some space operations such as a ``chair flip" or bonds rotation using digital models. 
+A study \autocite{savec_evaluating_2005} found that although virtual models could have the same effectiveness as concrete models, students should have access to concrete models at least at the beginning of the study because sometimes humans rely on concrete objects. Additionally, digital model tools have a learning curve, and it is hard for students to understand some space operations such as a ``chair flip" or bond rotation using digital models. 
 However, digital model representation has the benefit that allowing students to look up more information about the molecule such as the IUPAC (International Union of Pure and Applied Chemistry) name, the boiling point, and the polarity. Students can also modify the molecule and observe how it will affect the molecular properties. Thus, it will be beneficial if students can convert concrete molecular models to digital representations. 
 
 
@@ -330,11 +330,11 @@ We train our model on the synthetic dataset with AdamW \autocite{adamw} and an e
 With the fixed validation set, we did a hyperparameter search using both Weight and Bias \autocite{wandb} and manual tuning to select models with the highest validation token-level accuracy.  
 % Similar to the pretraining, the decoder is frozen. 
 % Additionally, we also freeze the projection layer between the encoder and reladecoder and the last 2 blocks of encoder EfficientNet-V2-S since the input of the decoder is in the same domain for pre-training and finetuning. This could also decrease the number of trainable parameters to avoid overfitting. 
-After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset
+After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset.
 .
 \section[Results and Discussions]{Results and Discussions\footnote{Although there are variations between each training, we only take one trained model in the evolution for simplicity. And different parts of the result might use different trained models. }}
 \subsection{Accuracy}
-We extended our validation set with some more molecules, this dataset is also filtered to remove images with occlusion and bad lighting. However, we kept some images that could be out of the domain for the model (poor lighting but atoms are still visible, and overly simplified molecule: methane) to avoid biased results from cherry-picking the data. For each molecule, take $k$ samples where $k$ is the number of images for that molecule in the dataset. For each sample, we randomly select $N$ images from the dataset without replacement. With a fixed $\alpha=0.75$ and softmax temperature $t=1$, the top-1 and top-$n$ sequence-level accuracy is shown in Figure \ref{grid}. 
+We extended our validation set with some more molecules, this dataset is also filtered to remove images with occlusion and bad lighting. However, we kept some images that could be out of the domain for the model (poor lighting but atoms are still visible, and overly simplified molecule: methane) to avoid biased results from cherry-picking the data. For each molecule, take $k$ samples where $k$ is the number of images for that molecule in the dataset. For each sample, we randomly select $N$ images from the dataset without replacement. With a fixed $\alpha=0.75$ and softmax temperature $t=1$, the top-1 and top-$n$ sequence-level accuracy is shown in Figure \ref{fig:grid}. We can see that with fixed hyperparameters, the model has the best top-1 accuracy with $beam=1, nImages=1$ and the best top-$n$ accuracy with $beam=5, nImages=1$. This is surprising because we hypothesized that multiple beams and images could increase the accuracy. We then hypothesize that for different $beam$ and $nImages$, there should be different $\alpha$ and $t$. We then use Weight and Bias \autocite{wandb} to do a random search with the search space listed in the table in the Appendix.
 
 \begin{figure}
     \centering
@@ -343,6 +343,8 @@ We extended our validation set with some more molecules, this dataset is also fi
     \caption{Model Accuracy with Fixed $\alpha$ and $t$}
     \label{fig:grid}
 \end{figure}
+
+
 
 Similar to \cite{swinocsr}, we evaluated the relationship between our model's performance with types of molecules and smiles string length. However, since our validation dataset is extremely limited, this could not be used as a defined answer. Figure \ref{fig:acc_each} shows the accuracy of each molecule in the validation set of the model without ITM. We can observe that for a few molecules, even the complex ones like caffeine, the model can achieve 100\% accuracy on them. However, on the other hand, there are a few molecules that the model achieves 0\% accuracy. A list of these molecules and their sample images are included in the Appendix. We also examined the relationship between the length of DeepSMILES and the accuracy as shown in Figure \ref{lenacc}. We can observe that there is no significant relationship between the DeepSMILES length and accuracy ($p=0.527$). This could indicate that the difficulty of a molecule does not depend on its length, but could also be due to the limited validation set size.  
 
@@ -359,15 +361,25 @@ Similar to \cite{swinocsr}, we evaluated the relationship between our model's pe
 % \label{score}
 % \end{equation}
 
-% \begin{table}[]
-%     \centering
-%     \begin{tabular}{c|cc}
-%       $beam$ & Top-1 Accuracy & Top-$beam$ Accuracy \\ \hline
-%       1 & 71.9 ± 5.8 & 71.9 ± 5.8 \\ 2 & 72.3 ± 5.8 & 79.8 ± 5.3 \\ 3 & 71.5 ± 5.8 & 84.6 ± 4.9 \\ 4 & 71.2 ± 5.8 & 86.9 ± 4.6 \\ 5 & 71.5 ± 5.8 & 87.3 ± 4.6
-%     \end{tabular}
-%     \caption{}
-%     \label{tab:my_label}
-% \end{table}
+\begin{table}[]
+    \centering
+    \begin{tabular}{c|cc}
+      $beam$ & Top-1 Accuracy & Top-$beam$ Accuracy\\ \hline
+1 & 84.6 (226) & 84.6 (226) \\ 2 & 88.0 (235) & 93.3 (248) \\ 3 & 90.6 (242) & 94.4 (252) \\ 4 & 85.4 (228) & 95.1 (254) \\ 5 & 85.0 (227) & 94.8 (253) \\
+    \end{tabular}
+    \caption{Accuracy and Correct Counts vs. $beam$}
+    \label{tab:beam}
+\end{table}
+
+\begin{table}[]
+    \centering
+    \begin{tabular}{c|cc}
+    nImages & Top-1 Accuracy\\ \hline
+1 & 85.0 (227)  \\ 2 & 90.6 (242)\\ 3 & 88.0 (235)  \\ 
+    \end{tabular}
+    \caption{Accuracy and Correct Counts vs. nImages}
+    \label{tab:nimages}
+\end{table}
 
 
 
@@ -378,15 +390,7 @@ Similar to \cite{swinocsr}, we evaluated the relationship between our model's pe
 % compare with hand written OCSR 
 % Since to the best of our knowledge, there is no pervious work targeting the same topic, we do not have any benchmark to compare to. However, the DECIMER.ai 
 
-% \begin{table}[]
-%     \centering
-%     \begin{tabular}{c|cc}
-%     nImages & Top-1 Accuracy & top-5 accuracy \\ \hline
-% 1 & 65.9 ± 6.4 & 83.5 ± 5.0 \\ 2 & 71.2 ± 5.8 & 85.8 ± 4.8 \\ 3 & 71.5 ± 5.8 & 87.3 ± 4.6 \\  
-%     \end{tabular}
-%     \caption{Caption}
-%     \label{tab:my_label}
-% \end{table}
+
 \subsection{Calibration}
 The model's calibration is the metric determining if the model's output accuracy is aligned with its uncertify.  The calibration metric of a model is important when it needs to make important decisions such as resume screaming and malware detection. \autocite{liang_holistic_2023} The calibration is important for our sequence generating task for another reason as we will select the output with the lowest uncertainty (highest \textit{logprob}) as the final output. We evaluated our model's calibration using a method similar to \cite{liang_holistic_2023}, we randomly sample in each sample, we randomly select 10 molecules and then randomly select images for each molecule. We calculate the mean accuracy for each sample and the mean perplexity ($logprob$) for each sample and plot them in Figure \ref{fig:cal1} for different $nImages$. Because the sequence probability (perplexity) is the product of the probabilities of each token, the value is usually small, with a range smaller than 0-1. Thus, did not use the commonly used metric expected calibration error (ECE) like in \cite{liang_holistic_2023}. In fact, even in \autocite{liang_holistic_2023}, they did not evaluate the calibration for generative tasks. Instead, we used the $r^2$ value to evaluate the calibration of the model. This is partially inspired by the $r^2$ values used in evaluating the quality of the calibration curve in analytical chemistry (such as absorption or GC-MS). 
 \begin{figure}
@@ -427,7 +431,9 @@ We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}
 
 \item  The purpose of the mistakes dictionary is to simulate the real mistakes that the model will encounter during inferences. However, during the training, the model generates the sequence by the teaching forcing method while during inferences the previous tokens are generated by the model itself. This will lead to a domain gap between the training mistakes and the inferences mistakes, making it possible that models cannot find the wrong output sequence during inferences. In future work, it is worth investigating if using the model's real output for mistakes dictionary (similar to the idea in Scheduled Sampling \autocite{bengio_scheduled_2015}) will be beneficial. 
 
-\item There are also two other hyperparameters in the inference that we need to consider: the softmax temperature ($t$) and $\alpha$ in the beam search penalty for short sequences. We did not systematically investigate the effects of these hyperparameters. However, our early shows that these two hyper-parameters can largely impact the performance of the model. In future work, the models might yield different absolute and relative results.      
+\item There are also two other hyperparameters in the inference that we need to consider: the softmax temperature ($t$) and $\alpha$ in the beam search penalty for short sequences. We did not systematically investigate the effects of these hyperparameters. However, our early shows that these two hyper-parameters can largely impact the performance of the model. In future work, the models might yield different absolute and relative results.     
+
+\item We only evaluated the model on the validation set, due to a limited time to collect and test on a real independent testing set. However, this is important to test the model's generalizability and robustness and should be investigated further in future studies. 
 % We used Weight and Bias \cite{wandb} to do a random sweep with on these hyperparameters and selected the hyperparameter set with the highest score, which is defined in Equation \ref{score} where $P_{1}$ and $P_{n}$ are top-1 and top-$beam$ accuracy.
 
 \end{itemize}
@@ -464,6 +470,12 @@ Here are image samples from the real-world dataset where the model achieves 0\% 
     \includegraphics[width=0.3\linewidth]{ss2.png}
     % \includegraphics[width=0.25\linewidth]{ss3.png}
 \end{center}
-
-
+\subsection*{Random search space for $t$ and $\alpha$}
+\begin{tabular}{c|c|c}
+Hyperparameter & Max & Min \\ \hline
+beam & 5  & 1 \\ 
+nImages & 3  & 1 \\
+temp & 5.0  & 0.01 \\
+alpha & 4.0  & 0.0 \\
+\end{tabular}
 \end{document}
