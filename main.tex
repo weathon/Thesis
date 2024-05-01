@@ -185,7 +185,7 @@ We also used a two-stage training process in our project, similar to \autocite{d
 
 We downloaded a set of compounds from PubChem \autocite{kim_pubchem_2023}, and then these compounds were filtered based on heavy atoms and molecular weights and only contained elements of C, O, S, H, N, Cl, Br, F, and P. Because of the complex 3D nature of molecules, there could be occlusions between atoms and bonds, where important information is hidden in the image. Although there are methods to avoid occlusions by some spatial algorithm or human selection, we decided to remove 3D spatial information in the pretraining stage. Thus, we downloaded the 2D coordinate from PubChem instead of 3D.  
 % filtered such that the compounds have at most X atoms \footnote{We did not directly limit the number of atoms on PubChem queries: we limited the number of heavy atoms and molecular weight, which yielded in the limitation of atoms.} 
-After filtering, there are 79,369 compounds in the dataset. The pre-train training and validation sets are separated by image IDs. We created a Blender Python Script to render these compounds into 3D molecular images. OpenAI ChatGPT was used to write the building blocks (API Wrapper) and some logic of the script. The colour of each atom follows the CPK colouring convention (shown in Table \ref{cpk}) and was according to a couple of online sources and 3D molecular models on the market. For each molecule, we rendered 4 different images at different angles. Detailed render process can be found in our GitHub repository. 
+After filtering, there are 79,369 compounds in the dataset. We created a Blender Python Script to render these compounds into 3D molecular images. OpenAI ChatGPT was used to write the building blocks (API Wrapper) and some logic of the script. The colour of each atom follows the CPK colouring convention (shown in Table \ref{cpk}) and was according to a couple of online sources and 3D molecular models on the market. The atoms are rendered using spheres, single bonds are rendered using cylinders, and double bonds are rendered using torus. For each molecule, we rendered 4 different images at different angles. Detailed render process can be found in our GitHub repository. 
 % self negative example: gan
 % Rendered from 2D information ....
 \begin{table}[]
@@ -220,6 +220,7 @@ We separated the training set and validation set by SMILES strings (i.e. differe
 \end{figure}
 Figure \ref{fig:example} shows an example of rendered and real images. These images are images from the dataset after super-resolution for better visualization. Figure \ref{fig:dis} shows the DeepSILES string length distribution and Figure \ref{chardis} shows the character frequency distribution of both datasets. 
 
+
 \subsection{Machine Learning Model} 
 \subsubsection{Basic Model}
 \begin{figure}
@@ -233,7 +234,7 @@ Our model architecture is shown in Fig \ref{fig:arch} and is very similar to the
 
 We extracted all the convolution layers from the EffcientNet-V2-S to get a feature map with size $1280\times13\times13$ ($Channel \times Width \times Height$)  for each batch. This feature map is then flattened into 2D shape $1280\times169$, re-permuted to sequence-like shape $169\times1280$ ($Sequence \times Channel$), projected to 256-dimension to match the input shape of SwinOCSR decoder, and passed through a dropout layer. The tensor is then fed into our decoder. which is adapted from SwinOCSR \autocite{swinocsr}. We also used focal loss in our model; however, instead of sigmoid, we used Softmax as implemented in \cite{torch_focal}.
 
-During training, we use the ``teacher forcing" method: the model will be given all the correct tokens and for each token ($t$-th) the model will predict the next token $(t+1)$-th on the same position on the output. Since the decoder in Transformer is masked self-self-attention, the token at $t$ will only have an attention score with previous tokens ($0\dots t-1$). This utilizes the parralization feature of the Transformer. However, this makes the model only see the correct previous tokens and not the wrong previous tokens (which would be common during inferences), making it possible for the model to cumulate the mistakes during inferences. \autocite{bengio_scheduled_2015} Thus, scheduled sampling \autocite{bengio_scheduled_2015} proposed to sometimes use the model's own output as the \textit{previous tokens} during training. However, this will disrupt the parreall features of transformers. Additionally, unlike natural language, which has some variation and fault tolerance, the DeepSMILES we are generating has only one correct answer. Thus, it does not matter if the error is cumulative as the DeepSMILES would be wrong either way. Therefore, we are not using the scheduled sampling in this project. 
+During training, we use the ``teacher forcing" method: the model will be given all the correct tokens and for each token ($t$-th) the model will predict the next token $(t+1)$-th on the same position on the output. Since the decoder in Transformer is masked self-self-attention, the token at $t$ will only have an attention score with previous tokens ($0\dots t-1$). This utilizes the parralization feature of the Transformer. However, this makes the model only see the correct previous tokens and not the wrong previous tokens (which would be common during inferences), making it possible for the model to cumulate the mistakes during inferences. \autocite{bengio_scheduled_2015} Thus, scheduled sampling \autocite{bengio_scheduled_2015} proposed to sometimes use the model's own output as the \textit{previous tokens} during training. However, this will disrupt the parallel features of transformers. Additionally, unlike natural language, which has some variation and fault tolerance, the DeepSMILES we generated has only one correct answer. Thus, it does not matter if the error is cumulative as the DeepSMILES would be wrong either way. Therefore, we are not using the scheduled sampling in this project. 
 
 \subsection{Beam search and Multi-image input}
 Beam search is a way to increase the accuracy of autoregressive models. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024}. Beam search can also provide users with multiple candidate answers to choose from, similar to the top-$n$ in image classification. However, one issue with beam search is that it will favour shorter sequences as a sub-sequence will always have a higher probability than its parent sequence. \autocite{yang_breaking_2018} \autocite{zhang_beam_2024} There are multiple methods to solve this issue, some are mentioned in \autocite{yang_breaking_2018} and \autocite{zhang_beam_2024}. In this paper, we use a simple method mentioned in \autocite{zhang_beam_2024} where we multiple $\frac{1}{L^\alpha}$ to the log probability where $L$ is the length of the sequence. This will make the log probability of a long sequence higher (since the log probability is negative). It can also be seen as taking the mean of the $logprob$ of each token when $\alpha=1$. The re-scored $logprob$ is shown in Equation \ref{beam}.\cite{zhang_beam_2024} where $P(y_t|y_1\dots y_{t-1}, \textbf{e})$ is the probility of output $y_t$ at $t$-th token given pervious tokens $y_1\dots y_{t-1}$ and image embeding $\textbf{e}$. 
@@ -287,24 +288,24 @@ Since the purpose of the ITM score is to find the best sequence in multiple mode
 mistakes = {correct:random.choices(SMILES, k=3) for correct in SMILES}
 
 # training loop
-for img, text_in, text_out in dataloader():
+for img, text_in, text_out, epoch in dataloader():
     # text_in is <start>SMILES<end>, text_out is SMILES<end>
     outputs = model(image, text_in, predict = True)[:,:-1,:]
     loss = focal_loss(outputs, text_out)
     model.gradient_descent.step()
-
-    for i in range(BATCH_SIZE):
-        if outputs != text_out:
-            mistakes[text_out[i]].append(outputs[i])
-            mistakes[text_out[i]].pop(0)
-    
-    label = [random()<0.5 for _ in range(BATCH_SIZE)]
-    text_in = [text_out[i] if j else random.choice(mistakes[text_out[i]]) for i, j in enumerate(label)]
-    # predict = False for binary classification 
-    outputs = model(image, text_in, predict = False)
-    # * 1.2 to give ITM loss more weight
-    loss = binary_cross_entropy_with_logits(outputs, label) * 1.2 
-    model.gradient_descent.step()
+    if max_epoch - epoch <=3
+        for i in range(BATCH_SIZE):
+            if outputs != text_out:
+                mistakes[text_out[i]].append(outputs[i])
+                mistakes[text_out[i]].pop(0)
+        
+        label = [random()<0.5 for _ in range(BATCH_SIZE)]
+        text_in = [text_out[i] if j else random.choice(mistakes[text_out[i]]) for i, j in enumerate(label)]
+        # predict = False for binary classification 
+        outputs = model(image, text_in, predict = False)
+        # * 1.2 to give ITM loss more weight
+        loss = binary_cross_entropy_with_logits(outputs, label) * 1.2 
+        model.gradient_descent.step()
     
 \end{lstlisting}
 \end{minipage}
@@ -317,18 +318,33 @@ for img, text_in, text_out in dataloader():
     %         text_in.append(random.choice(mistakes[corr]))
     %         label.append(0)
 \subsection{Experiment}
-
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{pipeline.png}
+    \caption{Training Pipeline}
+    \label{fig:pipeline}
+\end{figure}
 Since we have a small dataset for fine-tuning, we applied many random online data augmentation during the training process: random rotation, random flipping, random cropping,  and random colour jitter (including RGB channels and brightness). 
 
-We train our model on the synthetic dataset with AdamW \autocite{adamw} and an exponential learning rate scheduler. We then fine-tune our model on the real-world dataset. With the fixed validation set, we did a hyperparameter search using both Weight and Bias \autocite{wandb} and manual tuning to select models with the highest validation token-level accuracy.  
+We train our model on the synthetic dataset with AdamW \autocite{adamw} and an exponential learning rate scheduler. We then fine-tune our model on the real-world dataset. The training pipeline of the model is shown in Figure \ref{fig:pipeline}. For the model with ITM, during pretraining, the two loss functions (language modelling and image-text matching) are used at the same time throughout the whole process. A backward propagation and gradient descent step is performed after each forward for each loss function. However, during fine-tuning, the ITM loss is only used in the last 2 epochs. 
+With the fixed validation set, we did a hyperparameter search using both Weight and Bias \autocite{wandb} and manual tuning to select models with the highest validation token-level accuracy.  
 % Similar to the pretraining, the decoder is frozen. 
 % Additionally, we also freeze the projection layer between the encoder and reladecoder and the last 2 blocks of encoder EfficientNet-V2-S since the input of the decoder is in the same domain for pre-training and finetuning. This could also decrease the number of trainable parameters to avoid overfitting. 
-After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset.
+After training, we tested the model on a dataset between validation and testing. This dataset is not used in finetuning the hyperparameters but is used to test after hyperparameter tuning. However, it is not the final testing set. If the model performance is not ideal on this dataset, we returned the hyperparameters. This intermedia dataset could be used multiple times and will be merged into the validation set at the end and the model will be tested on a real dataset
+.
 \section[Results and Discussions]{Results and Discussions\footnote{Although there are variations between each training, we only take one trained model in the evolution for simplicity. And different parts of the result might use different trained models. }}
 \subsection{Accuracy}
-We extended our validation set with some more molecules, this dataset is also filtered to remove images with occlusion and bad lighting. However, we kept some images that could be out of the domain for the model (poor lighting but atoms are still visible, and overly simplified molecule: methane) to avoid biased results from cherry-picking the data. For each molecule, take $k$ samples where $k$ is the number of images for that molecule in the dataset. For each sample, we randomly select $N$ images from the dataset without replacement. 
+We extended our validation set with some more molecules, this dataset is also filtered to remove images with occlusion and bad lighting. However, we kept some images that could be out of the domain for the model (poor lighting but atoms are still visible, and overly simplified molecule: methane) to avoid biased results from cherry-picking the data. For each molecule, take $k$ samples where $k$ is the number of images for that molecule in the dataset. For each sample, we randomly select $N$ images from the dataset without replacement. With a fixed $\alpha=0.75$ and softmax temperature $t=1$, the top-1 and top-$n$ sequence-level accuracy is shown in Figure \ref{grid}. 
 
-Similar to \cite{swinocsr}, we evaluated the relationship between our model's performance with types of molecules and smiles string length. However, since our validation dataset is extremely limited, this could not be used as defined answer. Figure \ref{fig:acc_each} shows the accuracy of each molecule in the validation set of the model without ITM. We can observed that for a few molecules, even the complex ones like caffine, the model can achrieve 100\% accuracy on them. However, on theother hand, there are a few molecules that the model achrieves 0\% accuracy. A list of these molecules and their sample images are included in the Appendix. We also examinated the relationship between length of DeepSMILES and the accuracy as shown in Figure \ref{lenacc}. We can observe that there is no significant relationship between the DeepSMILES length and accuracy ($p=0.527$). This could indicated that the difficulty of a molecule is not depends on its length, but could also due to the limited validation set size.  
+\begin{figure}
+    \centering
+    \includegraphics[width=0.45\linewidth]{top1.png}
+    \includegraphics[width=0.45\linewidth]{topn.png}
+    \caption{Model Accuracy with Fixed $\alpha$ and $t$}
+    \label{fig:grid}
+\end{figure}
+
+Similar to \cite{swinocsr}, we evaluated the relationship between our model's performance with types of molecules and smiles string length. However, since our validation dataset is extremely limited, this could not be used as a defined answer. Figure \ref{fig:acc_each} shows the accuracy of each molecule in the validation set of the model without ITM. We can observe that for a few molecules, even the complex ones like caffeine, the model can achieve 100\% accuracy on them. However, on the other hand, there are a few molecules that the model achieves 0\% accuracy. A list of these molecules and their sample images are included in the Appendix. We also examined the relationship between the length of DeepSMILES and the accuracy as shown in Figure \ref{lenacc}. We can observe that there is no significant relationship between the DeepSMILES length and accuracy ($p=0.527$). This could indicate that the difficulty of a molecule does not depend on its length, but could also be due to the limited validation set size.  
 
 \begin{figure}
     \centering
@@ -352,6 +368,9 @@ Similar to \cite{swinocsr}, we evaluated the relationship between our model's pe
 %     \caption{}
 %     \label{tab:my_label}
 % \end{table}
+
+
+
 
 % Since the above validation set is manually filtered and is used to finetune hyperparameters, it might not be a fair demonstration of our model's capacity Thus, we also tested the model capacity with the hyperparameter found on the validation set on a separately collected testing dataset. And the result of the testing dataset 
 % I am not sure what to do here, sweep on test? Do not want to do so: no testing data. alex did not gave it to me. Also i need to find hyperparameter, should i compare it? zhihu said should be on validation 
@@ -386,26 +405,34 @@ The model's calibration is the metric determining if the model's output accuracy
 \end{figure}
 \section{Conclusion}
 \section{Demo}
-We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}} with a frontend and open source our model on github\footnote{\url{https://github.com/weathon/3d2smile}}. A simple demo video can be found on youTube \footnote{\url{https://youtu.be/m4AkzqKC-M4}}. 
+We deployed the model on our server \footnote{\url{http://file.weasoft.com:8888}} with a frontend and open source our model on github\footnote{\url{https://github.com/weathon/3d2smile}}. A simple demo video can be found on YouTube \footnote{\url{https://youtu.be/m4AkzqKC-M4}}. 
 \section{Limation and Future Work}
 \begin{itemize}
-\item In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts in organic chemistry for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. However, this is challenging because  
-In future works, we will attempt to recognize the stereochemical information and output iso-SMILES instead of regular smiles. 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.3\linewidth]{iso1.png}
+    \includegraphics[width=0.3\linewidth]{iso2.png}
+    \caption{Stereoisomers Example}
+    \label{fig:iso}
+\end{figure}
 
-\item Both of our dataset is limited by time and budget. COMPARE a larger dataset could increase the accuracy and robustness of the model. 
+\item In this project, we did not attempt to recognize stereochemical information such as chirality and E/Z structure. However, these are important concepts in organic chemistry for students to understand and being able to show these is one of the key characteristics and benefits of 3D models. However, this is challenging because it requires the ML model not only to understand the connectivity of the atoms but also their relative positions. There are minimal differences between the two stereoisomers. Figure \ref{fig:iso} shows two molecules which are stereoisomers to each other. Additionally, the ML model needs to learn how to output iso-SMILES, which contain stereochemical information, rather than regular SMILES. 
+% In future works, we will attempt to recognize the stereochemical information and output iso-SMILES instead of regular smiles. 
 
-\item This project only focused on the technical side of the problem and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
+\item Both of our datasets are limited by time and budget, especially when compared with previous work such as DECIMER.ai \cite{decimer} and SwinOCSR \autocite{swinocsr} despite our work dealing with real-world photos that have more variations. It is worth it in future studies to collect a larger dataset to increase the accuracy and robustness of the model.
+
+\item This project only focused on the technical side of the problem, including how to collect the dataset, train an ML model on it, and increase the accuracy of the model with various techniques, and did not test how well this application would be in classroom settings, further chemical education studies are needed to determine its effectiveness in education. 
 
 \item Traditional molecular models have some limitations, such as they might be misleading and let students think energy is needed to create bonds when they are not \autocite{snatoms}. Train a machine learning model on alternative molecular models, such as Snatoms\autocite{snatoms}, and might be able to provide better education values. 
 
-\item  The purpose of the mistakes dictionary is to simulate the real mistakes that the model will encounter during inferences. However, during the training, the model generates the sequence by the teaching forcing method (where it always gets the correct pervious tokens ($y_1 \dots y_{t-1}$) while during inferences the pervious tokens are generated by the model itself. This will lead to a domain gap between the training mistakes and the inferences mistakes, making it possible that models cannot find the wrong output sequence during inferences. In future work, it is worth investigating if using the model's real output for mistakes dictionary (similar to the idea in Scheduled Sampling \autocite{bengio_scheduled_2015}) will be beneficial. 
+\item  The purpose of the mistakes dictionary is to simulate the real mistakes that the model will encounter during inferences. However, during the training, the model generates the sequence by the teaching forcing method while during inferences the previous tokens are generated by the model itself. This will lead to a domain gap between the training mistakes and the inferences mistakes, making it possible that models cannot find the wrong output sequence during inferences. In future work, it is worth investigating if using the model's real output for mistakes dictionary (similar to the idea in Scheduled Sampling \autocite{bengio_scheduled_2015}) will be beneficial. 
 
-% \item There are also two other hyperparameters in the inference that we need to consider: the softmax temperature ($t$) and $\alpha$ in the beam search penalty for short sequences. We did not systematically investigate the effects of these hyperparameters. In future work, the models might yield different absolute and relative results.      
+\item There are also two other hyperparameters in the inference that we need to consider: the softmax temperature ($t$) and $\alpha$ in the beam search penalty for short sequences. We did not systematically investigate the effects of these hyperparameters. However, our early shows that these two hyper-parameters can largely impact the performance of the model. In future work, the models might yield different absolute and relative results.      
 % We used Weight and Bias \cite{wandb} to do a random sweep with on these hyperparameters and selected the hyperparameter set with the highest score, which is defined in Equation \ref{score} where $P_{1}$ and $P_{n}$ are top-1 and top-$beam$ accuracy.
 
 \end{itemize}
 \section*{Acknowledgement} 
-The author wants to thank  \textbf{Dr. Mohamed Shehata} for supervising and providing computing resources for this project; \textbf{Dr. Brian Ganley} from the Chemistry Department of the University of Missouri-Columbia and \textbf{Dr. Wesley Zandberg} from the University of British Columbia for providing use cases and other advice on this project; \textbf{Dr. Hung-yi Lee} from National Taiwan University and \textbf{Dr. Mu Li} and \textbf{Dr. Yi Zhu} from Amazon (now in Boson.ai) for their illuminating lectures on YouTube played an essential role in the process of this project; \textbf{Peizhi Yan}, \textbf{Dr. Shan Du}, and \textbf{Islam Osman} from the UBC for mentoring in the process; \textbf{Yiyang Du} from UBC for data collecting; and \textbf{Beiliang Zhao} from UBC for peer discussion.
+The author wants to thank  \textbf{Dr. Mohamed Shehata} for supervising and providing computing resources for this project; \textbf{Dr. Brian Ganley} from the Chemistry Department of the University of Missouri-Columbia and \textbf{Dr. Wesley Zandberg} from the University of British Columbia for providing use cases and other advice on this project; \textbf{Dr. Hung-yi Lee} from National Taiwan University and \textbf{Dr. Mu Li} and \textbf{Dr. Yi Zhu} from Amazon (now in Boson.ai) for their illuminating lectures on YouTube played an essential role in the process of this project; \textbf{Peizhi Yan}, \textbf{Dr. Shan Du}, and \textbf{Islam Osman} from the UBC for mentoring in the process; \textbf{Yiyang Du} as a research assistant from UBC for data collecting and cleaning; and \textbf{Beiliang Zhao} from UBC for peer discussion.
 
 % I would also want to thank my cat, Yiyang Du, for providing emotional support during this project. 
 
